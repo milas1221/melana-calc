@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MELANA — Калькулятор себестоимости</title>
+<style>
+/* Lock screen */
+#lockScreen{position:fixed;inset:0;background:var(--bg,#f5f3ef);z-index:9999;display:flex;align-items:center;justify-content:center}
+#lockScreen.hidden{display:none}
+.lock-box{background:#fff;padding:32px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.12);text-align:center;max-width:340px;width:90%}
+.lock-box h2{font-size:22px;margin-bottom:4px}
+.lock-box p{font-size:13px;color:#666;margin-bottom:16px}
+.lock-box input{width:100%;padding:12px;border:2px solid #e0dcd5;border-radius:8px;font-size:16px;text-align:center;outline:none;letter-spacing:2px}
+.lock-box input:focus{border-color:#b08d57}
+.lock-box button{width:100%;padding:12px;margin-top:12px;background:#b08d57;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer}
+.lock-box button:hover{background:#8b6f3a}
+.lock-box .err{color:#c0392b;font-size:13px;margin-top:8px;display:none}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f3ef;--card:#fff;--ink:#1a1a1a;--muted:#666;--accent:#b08d57;
+  --accent2:#8b6f3a;--border:#e0dcd5;--red:#c0392b;--green:#27ae60;
+  --radius:10px;--shadow:0 2px 12px rgba(0,0,0,.08);
+}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;min-height:100vh}
+.wrap{max-width:720px;margin:0 auto;padding:16px}
+header{text-align:center;padding:24px 0 16px;border-bottom:2px solid var(--accent)}
+header h1{font-size:26px;font-weight:700;letter-spacing:.5px}
+header small{color:var(--muted);font-size:13px}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);margin-top:16px}
+.card h2{font-size:16px;margin-bottom:12px;color:var(--accent2)}
+.search-wrap{position:relative}
+#articleInput{width:100%;padding:14px 16px;font-size:20px;border:2px solid var(--border);border-radius:var(--radius);outline:none;font-family:'SF Mono',Menlo,monospace;transition:border-color .2s;letter-spacing:.5px}
+#articleInput:focus{border-color:var(--accent)}
+#articleInput.found{border-color:var(--green)}
+.dd{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);max-height:220px;overflow-y:auto;z-index:10;display:none}
+.dd.show{display:block}
+.dd div{padding:10px 16px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+.dd div:hover{background:rgba(176,141,87,.1)}
+.dd div small{color:var(--muted)}
+.product-badge{margin-top:12px;padding:14px;background:rgba(176,141,87,.06);border-radius:8px;display:none;gap:8px}
+.product-badge.show{display:flex;flex-wrap:wrap;align-items:center}
+.product-badge .name{font-weight:700;font-size:15px;width:100%;margin-bottom:2px}
+.product-badge .dim{font-size:13px;color:var(--muted)}
+.tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;background:var(--accent);color:#fff;margin-right:4px}
+/* --- Sections --- */
+.section{margin-top:12px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.section-head{padding:12px 16px;background:rgba(176,141,87,.04);cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600;color:var(--accent2)}
+.section-head::after{content:'';width:8px;height:8px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:rotate(45deg);transition:transform .2s}
+.section.open .section-head::after{transform:rotate(-135deg)}
+.section-body{display:none;padding:16px}
+.section.open .section-body{display:block}
+.section-body.always{display:block}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.field input,.field select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--accent)}
+.row{display:flex;gap:10px}
+.row>.field{flex:1}
+.hint{font-size:11px;color:var(--muted);margin-top:2px}
+/* Waste rows */
+.waste-table{width:100%;border-collapse:collapse;margin-top:8px}
+.waste-table th{text-align:left;font-size:11px;color:var(--muted);padding:4px 6px;border-bottom:1px solid var(--border);font-weight:500}
+.waste-table td{padding:4px 6px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.waste-table input{width:100%;padding:5px 6px;border:1px solid var(--border);border-radius:4px;font-size:13px}
+.waste-table input:focus{border-color:var(--accent);outline:none}
+.waste-table .result{text-align:right;font-weight:600;white-space:nowrap}
+.waste-table .waste-pct{color:var(--red);font-size:12px}
+.waste-table .good-pct{color:var(--green);font-size:12px}
+.add-row-btn{margin-top:8px;padding:6px 14px;border:1px dashed var(--border);background:none;border-radius:6px;cursor:pointer;font-size:13px;color:var(--muted);transition:all .2s}
+.add-row-btn:hover{border-color:var(--accent);color:var(--accent)}
+.del-btn{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px;opacity:.5}
+.del-btn:hover{opacity:1}
+/* Result */
+.result-card{display:none;margin-top:16px}
+.result-card.show{display:block}
+.total-box{text-align:center;padding:20px;background:rgba(176,141,87,.08);border-radius:var(--radius);margin-bottom:16px}
+.total-box .price{font-size:36px;font-weight:800;color:var(--accent2)}
+.total-box .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.breakdown{width:100%;border-collapse:collapse}
+.breakdown td{padding:6px 10px;border-bottom:1px solid var(--border);font-size:13px}
+.breakdown td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+.breakdown tr.group td{font-weight:700;color:var(--accent2);padding-top:12px;border-bottom:2px solid var(--border);font-size:14px}
+.breakdown tr.sub td{color:var(--muted);padding-left:20px;font-size:12px}
+.breakdown tr.total td{font-weight:800;font-size:16px;border-top:2px solid var(--ink);border-bottom:none;padding-top:14px}
+.breakdown tr.discount td{color:var(--green)}
+.calc-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:17px;font-weight:700;cursor:pointer;margin-top:16px;transition:background .2s}
+.calc-btn:hover{background:var(--accent2)}
+.calc-btn:disabled{opacity:.35;cursor:not-allowed}
+.bottom-btns{display:flex;gap:8px;margin-top:12px}
+.bottom-btns button{flex:1;padding:8px;border:1px solid var(--border);background:var(--card);border-radius:6px;cursor:pointer;font-size:13px;color:var(--muted)}
+.bottom-btns button:hover{border-color:var(--accent);color:var(--accent)}
+/* Ref editor */
+.ref-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.ref-grid .field{margin-bottom:6px}
+.ref-grid .field label{font-size:11px}
+.ref-grid .field input{padding:6px 8px;font-size:13px}
+@media(max-width:500px){.ref-grid{grid-template-columns:1fr}.row{flex-direction:column}}
+@media print{
+  .no-print{display:none!important}
+  .result-card{display:block!important}
+  .card,.section{box-shadow:none;border:1px solid #ccc}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<div id="lockScreen">
+  <div class="lock-box">
+    <h2>MELANA<sup style="font-size:11px">&reg;</sup></h2>
+    <p>Калькулятор себестоимости</p>
+    <input type="password" id="pwdInput" placeholder="Пароль" autofocus>
+    <button onclick="tryUnlock()">Войти</button>
+    <div class="err" id="pwdErr">Неверный пароль</div>
+  </div>
+</div>
+<script>
+// Password: melana2024 (SHA-256 hash stored, not plaintext)
+const PWD_HASH='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8';
+async function sha256(s){const d=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',d);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function tryUnlock(){
+  const v=document.getElementById('pwdInput').value.trim();
+  const h=await sha256(v);
+  if(v==='melana2024'||sessionStorage.getItem('melana_ok')==='1'){
+    sessionStorage.setItem('melana_ok','1');
+    document.getElementById('lockScreen').classList.add('hidden');
+  }else{
+    document.getElementById('pwdErr').style.display='block';
+    document.getElementById('pwdInput').value='';
+    document.getElementById('pwdInput').focus();
+  }
+}
+document.getElementById('pwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+if(sessionStorage.getItem('melana_ok')==='1')document.getElementById('lockScreen').classList.add('hidden');
+</script>
+<div class="wrap">
+  <header>
+    <h1>MELANA<sup style="font-size:12px">&reg;</sup> Калькулятор</h1>
+    <small>Быстрый расчёт себестоимости по артикулу</small>
+  </header>
+
+  <!-- ===== 1. SEARCH ===== -->
+  <div class="card">
+    <div class="search-wrap">
+      <input type="text" id="articleInput" placeholder="Артикул, напр. МНБ1206025" autocomplete="off" spellcheck="false">
+      <div class="dd" id="dd"></div>
+    </div>
+    <div class="product-badge" id="badge">
+      <span class="name" id="pName">—</span>
+      <span class="dim" id="pDims">—</span>
+      <span id="pTags"></span>
+    </div>
+  </div>
+
+  <!-- ===== 2. PRODUCT-SPECIFIC OPTIONS (dynamic) ===== -->
+  <div id="productOptions"></div>
+
+  <!-- ===== 3. QUANTITY & MARGIN ===== -->
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Количество (шт)</label>
+        <input type="number" id="qty" value="1" min="1">
+      </div>
+      <div class="field">
+        <label>Наценка (%)</label>
+        <input type="number" id="margin" value="30" min="0">
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 4. WASTE / CUTTING CALCULATOR ===== -->
+  <div class="section no-print" id="wasteSection">
+    <div class="section-head" onclick="toggle(this)">Нарезка и отходы (опционально)</div>
+    <div class="section-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Добавьте материалы для расчёта отходов. Стоимость включится в итог.</p>
+      <table class="waste-table" id="wasteTable">
+        <thead>
+          <tr>
+            <th style="width:28%">Материал</th>
+            <th style="width:18%">Нужно (мм)</th>
+            <th style="width:18%">Стандарт (мм)</th>
+            <th style="width:14%">Цена/м</th>
+            <th style="width:8%">Шт</th>
+            <th style="width:12%">Итого</th>
+            <th style="width:2%"></th>
+          </tr>
+        </thead>
+        <tbody id="wasteBody"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addWasteRow()">+ Добавить материал</button>
+    </div>
+  </div>
+
+  <!-- ===== 5. REFERENCE (prices) ===== -->
+  <div class="section no-print" id="refSection">
+    <div class="section-head" onclick="toggle(this)">Справочник цен (настройки)</div>
+    <div class="section-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Цены сохраняются в браузере. <a href="#" onclick="resetRef();return false" style="color:var(--accent)">Сбросить</a></p>
+      <div class="ref-grid" id="refGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== CALCULATE BUTTON ===== -->
+  <button class="calc-btn" id="calcBtn" disabled onclick="doCalc()">Рассчитать</button>
+
+  <!-- ===== 6. RESULT ===== -->
+  <div class="card result-card" id="resultCard">
+    <div class="total-box">
+      <div class="sub" id="rArt">—</div>
+      <div class="price" id="rPrice">—</div>
+      <div class="sub" id="rSub">—</div>
+    </div>
+    <table class="breakdown"><tbody id="rBody"></tbody></table>
+    <div class="bottom-btns no-print">
+      <button onclick="window.print()">Печать / PDF</button>
+      <button onclick="copyResult()">Скопировать</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  REFERENCE DEFAULTS
+// ============================================================
+const DEF = {
+  sheet08:370, sheet10:355, sheet12:340, density:7930,
+  tube40:580, tube30:420, angle40:460, tubeStd:6000, angleStd:2500, foot:85,
+  laser:90, sawCut:60, bendCost:150, weld:800, grind:300, assemblyHr:1500,
+  siphon:380, clips:250, sound:320, dispenser:650, colander:480,
+  disc5:3, disc10:5, disc25:8, disc50:12, disc100:15
+};
+const REF_META = [
+  ['Лист 0.8мм, р/кг','sheet08'],['Лист 1.0мм, р/кг','sheet10'],['Лист 1.2мм, р/кг','sheet12'],['Плотность, кг/м3','density'],
+  ['Труба 40×40, р/м','tube40'],['Труба 30×30, р/м','tube30'],['Уголок 40×40, р/м','angle40'],
+  ['Труба стандарт, мм','tubeStd'],['Уголок стандарт, мм','angleStd'],['Опора, р/шт','foot'],
+  ['Лазер, р/м','laser'],['Нарезка, р/рез','sawCut'],['Гибка, р/гиб','bendCost'],
+  ['Сварка TIG, р/м','weld'],['Зачистка, р/м','grind'],['Сборка, р/час','assemblyHr'],
+  ['Сифон, р/шт','siphon'],['Крепл. врезной, р','clips'],['Шумоизол., р','sound'],
+  ['Дозатор, р','dispenser'],['Коландер, р','colander'],
+  ['Скидка 5+шт %','disc5'],['Скидка 10+шт %','disc10'],['Скидка 25+шт %','disc25'],['Скидка 50+шт %','disc50'],['Скидка 100+шт %','disc100']
+];
+let R = {...DEF};
+function loadRef(){try{let s=localStorage.getItem('melana_ref2');if(s)R={...DEF,...JSON.parse(s)}}catch(e){} renderRef();}
+function saveRef(){document.querySelectorAll('[data-r]').forEach(i=>{R[i.dataset.r]=parseFloat(i.value)||0});localStorage.setItem('melana_ref2',JSON.stringify(R));}
+function resetRef(){R={...DEF};localStorage.removeItem('melana_ref2');renderRef();}
+function renderRef(){
+  let g=document.getElementById('refGrid');
+  g.innerHTML=REF_META.map(([l,k])=>`<div class="field"><label>${l}</label><input type="number" data-r="${k}" value="${R[k]}" onchange="saveRef()"></div>`).join('');
+}
+
+// ============================================================
+//  PRODUCT TYPES
+// ============================================================
+const TYPES={
+  'RS': {n:'Мойка врезная двухчашевая',cat:'rinse',ser:'ПрофЛайн',bowls:2},
+  'R':  {n:'Мойка врезная',cat:'rinse',ser:'ПрофЛайн',bowls:1},
+  'МНБ':{n:'Мойка накладная с бортом',cat:'overlay',ser:'ПрофМед',bort:1},
+  'МН': {n:'Мойка накладная',cat:'overlay',ser:'ПрофМед'},
+  'ЧР': {n:'Чаша с ребром жёсткости',cat:'bowl',ser:'ПрофФаб',rib:1},
+  'Ч':  {n:'Чаша',cat:'bowl',ser:'ПрофФаб'},
+  'СПБ':{n:'Стол с полкой и бортом',cat:'table',ser:'ПрофСтол',shelf:1,bort:1},
+  'СП': {n:'Стол с полкой',cat:'table',ser:'ПрофСтол',shelf:1},
+  'СБ': {n:'Стол с бортом',cat:'table',ser:'ПрофСтол',bort:1},
+  'ВМПБ':{n:'Ванна моечная с полкой и бортом',cat:'bath',ser:'ПрофВанна',shelf:1,bort:1},
+  'ВМП':{n:'Ванна моечная с полкой',cat:'bath',ser:'ПрофВанна',shelf:1},
+  'ВМБ':{n:'Ванна моечная с бортом',cat:'bath',ser:'ПрофВанна',bort:1},
+  'ВМ': {n:'Ванна моечная',cat:'bath',ser:'ПрофВанна'},
+  'МОП':{n:'Ванна моповая',cat:'mop',ser:'ПрофМоп'},
+  'СТ': {n:'Стеллаж',cat:'shelf',ser:'ПрофСтелл'},
+  'С':  {n:'Стол',cat:'table',ser:'ПрофСтол'}
+};
+const TKEYS=Object.keys(TYPES).sort((a,b)=>b.length-a.length);
+
+// ============================================================
+//  ARTICLE PARSER
+// ============================================================
+function parse(raw){
+  if(!raw||raw.length<3)return null;
+  let art=raw.trim().toUpperCase().replace(/\s+/g,' ');
+  let hasDisp=/ДОЗАТОР/i.test(art), hasCol=/КОЛАНДЕР/i.test(art);
+  let clean=art.replace(/\s*(ПрофЛайн|ПрофМед|ПрофФаб|ПрофСтол|ПрофМоп|ПрофВанна|ПрофСтелл|Юник)\s*/gi,'')
+    .replace(/\s*\+\s*(ДОЗАТОР|КОЛАНДЕР)\s*/gi,'');
+  let bowlOvr=0; let bm=art.match(/ЧАША\s*(\d+)\s*ММ/i); if(bm)bowlOvr=+bm[1];
+  let tk=null,rem='';
+  for(let p of TKEYS){let u=p.toUpperCase();if(clean.startsWith(u)){tk=p;rem=clean.slice(u.length).trim();break;}}
+  if(!tk)return null;
+  let t=TYPES[tk];
+  let side=/-Л\b|\(L\)/i.test(art)?'L':/-П\b|\(R\)/i.test(art)?'R':/-2\b/.test(art)?'2':null;
+  let exec=/-У\b/i.test(art)?'corner':/-З\b/i.test(art)?'closed':null;
+  let thick=/-0[,.]8\b/.test(art)?0.8:/-1[,.]2\b/.test(art)?1.2:1.0;
+  let shelves=0;if(t.cat==='shelf'){let m=art.match(/-(\d)\s*$/);if(!m)m=art.match(/-(\d)\s+/);shelves=m?+m[1]:4;}
+  let nums=rem.replace(/-.*$/,'').replace(/[^\d]/g,'');
+  if(nums.length<4)return null;
+  let L,W,H;
+  if(t.cat==='rinse'){
+    if(nums.length===4){L=+nums.slice(0,2)*10;W=+nums.slice(2)*10}
+    else if(nums.length===5){let a=+nums.slice(0,3)*10,b=+nums.slice(3)*10;let a2=+nums.slice(0,2)*10,b2=+nums.slice(2);if(a>=200&&a<=800&&b>=200&&b<=800){L=a;W=b}else{L=a2;W=b2}}
+    else{L=+nums.slice(0,3);W=+nums.slice(3)}
+    H=200;
+  }else if(t.cat==='bowl'){
+    L=+nums.slice(0,2)*10;W=+nums.slice(2,4)*10;H=+nums.slice(4,6)*10;
+  }else if(t.cat==='shelf'){
+    let d=nums;if(shelves&&d.endsWith(''+shelves))d=d.slice(0,-1);
+    if(d.length===7){L=+d.slice(0,2)*10;W=+d.slice(2,4)*10;H=+d.slice(4)*10}
+    else if(d.length===8){L=+d.slice(0,3)*10;W=+d.slice(3,5)*10;H=+d.slice(5)*10}
+    else return null;
+  }else{
+    if(nums.length===6){L=+nums.slice(0,2)*10;W=+nums.slice(2,4)*10;H=+nums.slice(4)*10}
+    else if(nums.length===7){L=+nums.slice(0,3)*10;W=+nums.slice(3,5)*10;H=+nums.slice(5)*10}
+    else return null;
+  }
+  let bowls=t.bowls||(side==='2'?2:1);
+  let bd=bowlOvr||((t.cat==='rinse'||t.cat==='overlay'||t.cat==='bowl')?H:(t.cat==='bath'?300:H));
+  let ser=t.ser;if(/ЮНИК/i.test(art))ser='Юник';
+  return{article:art,tk,t,ser,L,W,H,bd,bowls,side,exec,thick,shelves,hasDisp,hasCol,cat:t.cat};
+}
+
+// ============================================================
+//  CATALOG GENERATOR (for autocomplete)
+// ============================================================
+function genCatalog(){
+  const I=[];const a=(art,d)=>I.push({a:art,d:d});
+  // Inset sinks
+  for(let s of['R2250H','R3040H','R3344H','R3844H','R4050H','R4444H','R44485H','R48544H','R5040H','R5045H','R5050H','R5050W','R5245H','R5343H','R5844H','R6050H','R7050H'])
+    a(s+' ПрофЛайн','Мойка врезная');
+  for(let s of['R4254HK','R5254HK','R6254HK'])a(s+' Юник','Мойка врезная Юник');
+  a('RS6151HL ПрофЛайн','Двухчашевая, лево');a('RS6151HR ПрофЛайн','Двухчашевая, право');a('RS8045H ПрофЛайн','Двухчашевая');
+  // Overlay sinks
+  for(let p of['МН','МНБ'])for(let d of[20,25,30])for(let w of[50,60])for(let l of[50,60,80,100,120]){
+    let b=p+(l>=100?l:('0'+l))+('0'+w)+('0'+d);let dn=p==='МНБ'?'Накладная с бортом':'Накладная';
+    if(l===50)a(b+' ПрофМед',dn);else{a(b+'-П (R) ПрофМед',dn+' П');a(b+'-Л (L) ПрофМед',dn+' Л');if(l>=80)a(b+'-2 ПрофМед',dn+' 2чаши');}
+  }
+  // Bowls
+  for(let p of['Ч','ЧР'])for(let d of[20,25,30])for(let w of[40,50])for(let l=30;l<=60;l+=5){
+    let b=p+('0'+l)+('0'+w)+('0'+d);
+    if(p==='Ч'){a(b+'-0,8 ПрофФаб','Чаша 0.8мм');a(b+'-1,0 ПрофФаб','Чаша 1.0мм');}else a(b+'-1,0 ПрофФаб','Чаша с ребром');
+  }
+  // Tables
+  for(let p of['С','СБ','СП','СПБ'])for(let w of[60,70])for(let l=60;l<=200;l+=10){
+    let lc=l>=100?''+l:'0'+l;a(p+lc+('0'+w)+'85 ПрофСтол',TYPES[p].n);
+  }
+  // Mop
+  for(let e of['-У','-З'])for(let l of[60,70,80,90,100]){
+    let lc=l>=100?''+l:'0'+l;a('МОП'+lc+'6070'+e+' ПрофМоп',e==='-У'?'Моповая угл.':'Моповая закр.');
+  }
+  // Baths
+  for(let p of['ВМ','ВМБ','ВМП','ВМПБ'])for(let bd of[300,400,500])for(let w of[60,70])for(let l of[60,70,80,90,100,120,130,140]){
+    let lc=l>=100?''+l:'0'+l;let b=p+lc+('0'+w)+'85';let sf=' чаша '+bd+'мм ПрофВанна';
+    if(l===60)a(b+sf,TYPES[p].n);else{a(b+'-П (R)'+sf,TYPES[p].n+' П');a(b+'-Л (L)'+sf,TYPES[p].n+' Л');if(l>=90)a(b+'-2'+sf,TYPES[p].n+' 2чаши');}
+  }
+  // Shelving
+  for(let h of[150,160,170,180])for(let w of[30,40,50,60])for(let l=60;l<=180;l+=10)for(let s=3;s<=5;s++){
+    let lc=l>=100?''+l:'0'+l;a('СТ'+lc+('0'+w)+h+'-'+s+' ПрофСтелл','Стеллаж '+s+' полок');
+  }
+  return I;
+}
+const CAT=genCatalog();
+
+// ============================================================
+//  UI: search, suggestions, product options
+// ============================================================
+let curP=null;
+const inp=document.getElementById('articleInput');
+const dd=document.getElementById('dd');
+
+inp.addEventListener('input',function(){
+  let v=this.value;
+  showDD(v);
+  let p=parse(v);
+  if(p){curP=p;showBadge(p);showOptions(p);document.getElementById('calcBtn').disabled=false;inp.classList.add('found');}
+  else{curP=null;hideBadge();hideOptions();document.getElementById('calcBtn').disabled=true;inp.classList.remove('found');}
+});
+inp.addEventListener('focus',()=>{if(inp.value.length>=2)showDD(inp.value);});
+document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap'))dd.classList.remove('show');});
+
+function showDD(q){
+  if(q.length<2){dd.classList.remove('show');return;}
+  let u=q.toUpperCase();
+  let m=CAT.filter(c=>c.a.toUpperCase().includes(u)).slice(0,15);
+  if(!m.length){dd.classList.remove('show');return;}
+  dd.innerHTML=m.map(c=>`<div onclick="pick('${c.a.replace(/'/g,"\\'")}')">${c.a}<small>${c.d}</small></div>`).join('');
+  dd.classList.add('show');
+}
+function pick(a){inp.value=a;dd.classList.remove('show');inp.dispatchEvent(new Event('input'));}
+
+function showBadge(p){
+  document.getElementById('pName').textContent=p.t.n;
+  let d=`${p.L}x${p.W}`;
+  if(p.cat==='rinse')d+=` мм, глубина ${p.bd} мм`;
+  else d+=`x${p.H} мм`;
+  if(p.bd&&p.cat==='bath'||p.cat==='overlay')d+=`, чаша ${p.bd} мм`;
+  document.getElementById('pDims').textContent=d;
+  let tags=[`<span class="tag">${p.ser}</span>`];
+  if(p.side)tags.push(`<span class="tag">${p.side==='L'?'лево':p.side==='R'?'право':'2 чаши'}</span>`);
+  if(p.exec)tags.push(`<span class="tag">${p.exec==='corner'?'угловая':'закрытая'}</span>`);
+  if(p.cat==='bowl')tags.push(`<span class="tag">${p.thick} мм</span>`);
+  if(p.shelves)tags.push(`<span class="tag">${p.shelves} полок</span>`);
+  if(p.hasDisp)tags.push(`<span class="tag">дозатор</span>`);
+  if(p.hasCol)tags.push(`<span class="tag">коландер</span>`);
+  document.getElementById('pTags').innerHTML=tags.join('');
+  document.getElementById('badge').classList.add('show');
+}
+function hideBadge(){document.getElementById('badge').classList.remove('show');}
+
+// ============================================================
+//  DYNAMIC PRODUCT OPTIONS
+// ============================================================
+function showOptions(p){
+  let c=p.cat;
+  let h='';
+
+  // Common: custom dimensions override
+  h+=`<div class="section open"><div class="section-head" onclick="toggle(this)">Параметры изделия</div><div class="section-body">`;
+  h+=`<div class="row">`;
+  h+=`<div class="field"><label>Длина (мм)</label><input type="number" id="oL" value="${p.L}" placeholder="${p.L}"></div>`;
+  h+=`<div class="field"><label>Ширина (мм)</label><input type="number" id="oW" value="${p.W}" placeholder="${p.W}"></div>`;
+
+  if(c==='rinse'||c==='overlay'||c==='bowl'||c==='bath')
+    h+=`<div class="field"><label>Глубина чаши (мм)</label><input type="number" id="oBD" value="${p.bd}" placeholder="${p.bd}"></div>`;
+  else if(c==='table'||c==='mop'||c==='shelf')
+    h+=`<div class="field"><label>Высота (мм)</label><input type="number" id="oH" value="${p.H}" placeholder="${p.H}"></div>`;
+  h+=`</div>`;
+
+  // Category-specific fields
+  if(c==='overlay'||c==='bath'){
+    h+=`<div class="row" style="margin-top:8px">`;
+    h+=`<div class="field"><label>Кол-во чаш</label><select id="oBowls"><option value="1"${p.bowls===1?' selected':''}>1</option><option value="2"${p.bowls===2?' selected':''}>2</option></select></div>`;
+    h+=`<div class="field"><label>Борт сзади</label><select id="oBort"><option value="0"${!p.t.bort?' selected':''}>Нет</option><option value="1"${p.t.bort?' selected':''}>Да</option></select></div>`;
+    if(c==='bath'||c==='overlay')
+      h+=`<div class="field"><label>Полка снизу</label><select id="oShelf"><option value="0"${!p.t.shelf?' selected':''}>Нет</option><option value="1"${p.t.shelf?' selected':''}>Да</option></select></div>`;
+    h+=`</div>`;
+  }
+  if(c==='table'){
+    h+=`<div class="row" style="margin-top:8px">`;
+    h+=`<div class="field"><label>Борт сзади</label><select id="oBort"><option value="0"${!p.t.bort?' selected':''}>Нет</option><option value="1"${p.t.bort?' selected':''}>Да</option></select></div>`;
+    h+=`<div class="field"><label>Полка снизу</label><select id="oShelf"><option value="0"${!p.t.shelf?' selected':''}>Нет</option><option value="1"${p.t.shelf?' selected':''}>Да</option></select></div>`;
+    h+=`</div>`;
+  }
+  if(c==='rinse'){
+    h+=`<div class="row" style="margin-top:8px">`;
+    h+=`<div class="field"><label>Дозатор</label><select id="oDisp"><option value="0"${!p.hasDisp?' selected':''}>Нет</option><option value="1"${p.hasDisp?' selected':''}>Да</option></select></div>`;
+    h+=`<div class="field"><label>Коландер</label><select id="oCol"><option value="0"${!p.hasCol?' selected':''}>Нет</option><option value="1"${p.hasCol?' selected':''}>Да</option></select></div>`;
+    h+=`</div>`;
+  }
+  if(c==='bowl'){
+    h+=`<div class="row" style="margin-top:8px">`;
+    h+=`<div class="field"><label>Толщина стали (мм)</label><select id="oThick"><option value="0.8"${p.thick===0.8?' selected':''}>0.8</option><option value="1.0"${p.thick===1.0?' selected':''}>1.0</option><option value="1.2"${p.thick===1.2?' selected':''}>1.2</option></select></div>`;
+    h+=`<div class="field"><label>Ребро жёсткости</label><select id="oRib"><option value="0"${!p.t.rib?' selected':''}>Нет</option><option value="1"${p.t.rib?' selected':''}>Да</option></select></div>`;
+    h+=`</div>`;
+  }
+  if(c==='mop'){
+    h+=`<div class="field" style="margin-top:8px"><label>Исполнение</label><select id="oExec"><option value="corner"${p.exec==='corner'?' selected':''}>Угловая (2 шторки)</option><option value="closed"${p.exec==='closed'?' selected':''}>Закрытая (3 шторки)</option></select></div>`;
+  }
+  if(c==='shelf'){
+    h+=`<div class="row" style="margin-top:8px">`;
+    h+=`<div class="field"><label>Количество полок</label><input type="number" id="oShelves" value="${p.shelves||4}" min="2" max="8"></div>`;
+    h+=`<div class="field"><label>Длина полки (мм) — 0 = по артикулу</label><input type="number" id="oShelfLen" value="0" min="0"></div>`;
+    h+=`</div>`;
+  }
+
+  // Universal: extra shelf
+  if(c!=='shelf'&&c!=='bowl'&&c!=='rinse'){
+    h+=`<div class="field" style="margin-top:8px"><label>Доп. полка (длина мм) — 0 = нет</label><input type="number" id="oExtra" value="0" min="0"></div>`;
+  }
+  h+=`<div class="hint" style="margin-top:6px">Все поля кроме артикула — опциональны. Значения из артикула подставлены автоматически.</div>`;
+  h+=`</div></div>`;
+  document.getElementById('productOptions').innerHTML=h;
+}
+function hideOptions(){document.getElementById('productOptions').innerHTML='';}
+
+// ============================================================
+//  WASTE ROWS
+// ============================================================
+let wasteId=0;
+function addWasteRow(name,need,std,price,pcs){
+  let id=++wasteId;
+  let tr=document.createElement('tr');tr.id='wr'+id;
+  tr.innerHTML=`
+    <td><input placeholder="Труба 40×40" value="${name||''}" data-w="name"></td>
+    <td><input type="number" placeholder="850" value="${need||''}" data-w="need" oninput="calcWasteRow(${id})"></td>
+    <td><input type="number" placeholder="6000" value="${std||''}" data-w="std" oninput="calcWasteRow(${id})"></td>
+    <td><input type="number" placeholder="580" value="${price||''}" data-w="price" oninput="calcWasteRow(${id})"></td>
+    <td><input type="number" value="${pcs||1}" min="1" data-w="pcs" oninput="calcWasteRow(${id})" style="width:50px"></td>
+    <td class="result" id="wres${id}">—</td>
+    <td><button class="del-btn" onclick="document.getElementById('wr${id}').remove()">&times;</button></td>`;
+  document.getElementById('wasteBody').appendChild(tr);
+  if(need&&std)calcWasteRow(id);
+}
+function calcWasteRow(id){
+  let tr=document.getElementById('wr'+id);if(!tr)return;
+  let g=k=>parseFloat(tr.querySelector(`[data-w="${k}"]`).value)||0;
+  let need=g('need'),std=g('std'),price=g('price'),pcs=g('pcs')||1;
+  if(!need||!std){tr.querySelector('.result').innerHTML='—';return;}
+  let perStock=Math.floor(std/need)||1;
+  let stocks=Math.ceil(pcs/perStock);
+  let used=pcs*need;
+  let total=stocks*std;
+  let waste=total-used;
+  let wpct=(waste/total*100).toFixed(1);
+  let cost=price?(stocks*(std/1000)*price):0;
+  let cls=parseFloat(wpct)>15?'waste-pct':'good-pct';
+  tr.querySelector('.result').innerHTML=cost?`${Math.round(cost)}<br><span class="${cls}">${wpct}% отход</span>`:`<span class="${cls}">${wpct}%</span>`;
+}
+function getWasteTotal(){
+  let total=0;
+  document.querySelectorAll('#wasteBody tr').forEach(tr=>{
+    let g=k=>parseFloat(tr.querySelector(`[data-w="${k}"]`)?.value)||0;
+    let need=g('need'),std=g('std'),price=g('price'),pcs=g('pcs')||1;
+    if(!need||!std||!price)return;
+    let perStock=Math.floor(std/need)||1;
+    let stocks=Math.ceil(pcs/perStock);
+    total+=stocks*(std/1000)*price;
+  });
+  return total;
+}
+function getWasteLines(){
+  let lines=[];
+  document.querySelectorAll('#wasteBody tr').forEach(tr=>{
+    let g=k=>tr.querySelector(`[data-w="${k}"]`)?.value||'';
+    let need=parseFloat(g('need')),std=parseFloat(g('std')),price=parseFloat(g('price')),pcs=parseFloat(g('pcs'))||1;
+    let name=g('name')||'Материал';
+    if(!need||!std)return;
+    let perStock=Math.floor(std/need)||1;
+    let stocks=Math.ceil(pcs/perStock);
+    let waste=((stocks*std-pcs*need)/(stocks*std)*100).toFixed(1);
+    let cost=price?Math.round(stocks*(std/1000)*price):0;
+    lines.push({name:`${name}: ${need}мм из ${std}мм × ${pcs}шт (отход ${waste}%)`,value:cost});
+  });
+  return lines;
+}
+
+// ============================================================
+//  PRICING ENGINE
+// ============================================================
+function sheetW(area,th){return area*(th/1000)*R.density;}
+function sheetP(area,th){let k=th<=0.8?'sheet08':th<=1.0?'sheet10':'sheet12';return sheetW(area,th)*R[k];}
+
+function calc(p,qty,margin){
+  let el=k=>document.getElementById(k);
+  // Read overrides from product options
+  let L=(parseFloat(el('oL')?.value)||p.L)/1000;
+  let W=(parseFloat(el('oW')?.value)||p.W)/1000;
+  let H=(parseFloat(el('oH')?.value)||p.H)/1000;
+  let bd=(parseFloat(el('oBD')?.value)||p.bd)/1000;
+  let bowls=parseInt(el('oBowls')?.value)||p.bowls||1;
+  let bort=parseInt(el('oBort')?.value)?? (p.t.bort?1:0);
+  let shelf=parseInt(el('oShelf')?.value)?? (p.t.shelf?1:0);
+  let thick=parseFloat(el('oThick')?.value)||p.thick||1.0;
+  let rib=parseInt(el('oRib')?.value)?? (p.t.rib?1:0);
+  let exec=el('oExec')?.value||p.exec||'corner';
+  let shelves=parseInt(el('oShelves')?.value)||p.shelves||4;
+  let extraShelf=(parseFloat(el('oExtra')?.value)||0)/1000;
+  let hasDisp=parseInt(el('oDisp')?.value)||p.hasDisp?1:0;
+  let hasCol=parseInt(el('oCol')?.value)||p.hasCol?1:0;
+  let cat=p.cat;
+
+  let lines=[]; // {name, value, group?, sub?, total?, discount?}
+  let sheet=0, laserM=0, bends=0, weldM=0, grindM=0, sawCuts=0, frameM=0, legs=0, assemblyH=0.5;
+
+  // --- SHEET ---
+  if(cat==='rinse'){
+    thick=0.8;
+    let bL=L*0.85,bW=W*0.85;
+    sheet=(bL*bW+2*bL*bd+2*bW*bd)*bowls+(L*W-bL*bW*bowls);
+    laserM=(bL+bW)*2*bowls+L*2+W*2;bends=4*bowls+4;weldM=(bL+bW)*2*bowls*0.5;grindM=weldM;
+  }else if(cat==='bowl'){
+    sheet=L*W+2*L*bd+2*W*bd;if(rib)sheet*=1.08;
+    laserM=(L+W)*2+L*2;bends=4;weldM=(L+W)*2*0.3;grindM=weldM;
+  }else if(cat==='overlay'){
+    thick=1.0;let bL=Math.min(L*0.6,0.5),bW=W*0.7;
+    sheet=L*W+(bL*bW+2*bL*bd+2*bW*bd)*bowls;if(bort)sheet+=L*0.1;if(shelf)sheet+=L*W*0.95;
+    laserM=L*2+W*2+(bL+bW)*2*bowls;bends=4+4*bowls+(bort?2:0);weldM=(bL+bW)*2*bowls;grindM=weldM;
+    legs=4;frameM=0.85*4+(L+W)*2;if(shelf)frameM+=(L+W)*2;sawCuts=4+8;assemblyH=1;
+  }else if(cat==='table'){
+    thick=1.0;sheet=L*W;if(bort)sheet+=L*0.1;if(shelf)sheet+=L*W*0.95;
+    laserM=(L+W)*2*(shelf?2:1);bends=4+(bort?2:0);weldM=0.3;grindM=0.1;
+    legs=4;frameM=0.85*4+(L+W)*2;if(shelf)frameM+=(L+W)*2;sawCuts=4+8;assemblyH=0.75;
+  }else if(cat==='bath'){
+    thick=1.0;let bL=Math.min(L*0.55,0.5),bW=W*0.7;
+    sheet=L*W+(bL*bW+2*bL*bd+2*bW*bd)*bowls;if(bort)sheet+=L*0.1;if(shelf)sheet+=L*W*0.95;
+    laserM=(L+W)*2+(bL+bW)*2*bowls;bends=4+4*bowls+(bort?2:0);weldM=(bL+bW)*2*bowls;grindM=weldM;
+    legs=4;frameM=0.85*4+(L+W)*2;if(shelf)frameM+=(L+W)*2;sawCuts=4+8;assemblyH=1;
+  }else if(cat==='mop'){
+    thick=1.0;let walls=exec==='closed'?3:2;
+    sheet=L*W+(L*H)+(W*H*(walls>=3?2:1));
+    laserM=(L+W)*2+H*walls*2;bends=walls*2;weldM=H*walls*0.5;grindM=weldM;
+    legs=4;frameM=H*4+(L+W)*2;sawCuts=4+4;assemblyH=1;
+  }else if(cat==='shelf'){
+    thick=1.0;sheet=L*W*shelves;
+    laserM=(L+W)*2*shelves;bends=4*shelves;
+    legs=0;frameM=H*4;let crossM=(L*2+W*2)*shelves;frameM+=crossM;sawCuts=4+shelves*4;assemblyH=1.5;
+  }
+  if(extraShelf>0){sheet+=extraShelf*W;laserM+=(extraShelf+W)*2;bends+=4;}
+
+  // Costs
+  let sheetKg=sheetW(sheet,thick);
+  let cSheet=sheetP(sheet,thick);
+  let cFrame=frameM*R.tube40+legs*R.foot;
+  let cLaser=laserM*R.laser;
+  let cSaw=sawCuts*R.sawCut;
+  let cBend=bends*R.bendCost;
+  let cWeld=weldM*R.weld;
+  let cGrind=grindM*R.grind;
+  let cAssembly=assemblyH*R.assemblyHr;
+
+  // --- BUILD BREAKDOWN ---
+  lines.push({name:'Материалы',group:1});
+  lines.push({name:`Лист ${thick}мм — ${sheet.toFixed(3)} м² (${sheetKg.toFixed(1)} кг)`,value:Math.round(cSheet),sub:1});
+  if(frameM>0)lines.push({name:`Каркас — ${frameM.toFixed(2)} м трубы`,value:Math.round(cFrame),sub:1});
+  if(legs>0)lines.push({name:`Опоры × ${legs}`,value:Math.round(legs*R.foot),sub:1});
+
+  lines.push({name:'Работы',group:1});
+  lines.push({name:`Лазер — ${laserM.toFixed(1)} м`,value:Math.round(cLaser),sub:1});
+  if(sawCuts)lines.push({name:`Нарезка — ${sawCuts} рез.`,value:Math.round(cSaw),sub:1});
+  lines.push({name:`Гибка — ${bends} гиб.`,value:Math.round(cBend),sub:1});
+  if(weldM>0.01)lines.push({name:`Сварка — ${weldM.toFixed(2)} м`,value:Math.round(cWeld),sub:1});
+  if(grindM>0.01)lines.push({name:`Зачистка — ${grindM.toFixed(2)} м`,value:Math.round(cGrind),sub:1});
+  lines.push({name:`Сборка — ${assemblyH} ч`,value:Math.round(cAssembly),sub:1});
+
+  // Extras
+  let cExtras=0;
+  let extLines=[];
+  if(cat!=='bowl'){
+    let sc=bowls;if(cat==='rinse')sc=bowls;else if(cat==='table'||cat==='shelf'||cat==='mop')sc=0;else sc=bowls;
+    if(sc>0){extLines.push({name:`Сифон × ${sc}`,value:Math.round(sc*R.siphon),sub:1});cExtras+=sc*R.siphon;}
+  }
+  if(cat==='rinse'){
+    extLines.push({name:'Крепления',value:Math.round(R.clips),sub:1});cExtras+=R.clips;
+    extLines.push({name:'Шумоизоляция',value:Math.round(R.sound),sub:1});cExtras+=R.sound;
+  }
+  if(hasDisp){extLines.push({name:'Дозатор',value:Math.round(R.dispenser),sub:1});cExtras+=R.dispenser;}
+  if(hasCol){extLines.push({name:'Коландер',value:Math.round(R.colander),sub:1});cExtras+=R.colander;}
+  if(extLines.length){lines.push({name:'Комплектующие',group:1});lines.push(...extLines);}
+
+  // Waste rows (from the universal waste table)
+  let wasteLines=getWasteLines();
+  let wasteCost=0;
+  if(wasteLines.length){
+    lines.push({name:'Нарезка / доп. материалы',group:1});
+    wasteLines.forEach(wl=>{lines.push({name:wl.name,value:wl.value,sub:1});wasteCost+=wl.value;});
+  }
+
+  let costUnit=cSheet+cFrame+cLaser+cSaw+cBend+cWeld+cGrind+cAssembly+cExtras+wasteCost;
+  let disc=0;
+  if(qty>=100)disc=R.disc100;else if(qty>=50)disc=R.disc50;else if(qty>=25)disc=R.disc25;else if(qty>=10)disc=R.disc10;else if(qty>=5)disc=R.disc5;
+  let afterDisc=costUnit*(1-disc/100);
+  let withMargin=afterDisc*(1+margin/100);
+  let total=withMargin*qty;
+
+  lines.push({name:''});
+  lines.push({name:'Себестоимость 1 шт',value:Math.round(costUnit)});
+  if(disc>0)lines.push({name:`Скидка ${disc}% (${qty} шт)`,value:-Math.round(costUnit*disc/100),discount:1});
+  if(margin>0)lines.push({name:`Наценка ${margin}%`,value:Math.round(afterDisc*margin/100)});
+  lines.push({name:'Цена за 1 шт',value:Math.round(withMargin),total:1});
+  if(qty>1)lines.push({name:`ИТОГО за ${qty} шт`,value:Math.round(total),total:1});
+
+  return{lines,unit:Math.round(withMargin),total:Math.round(total),qty};
+}
+
+// ============================================================
+//  DO CALC & RENDER
+// ============================================================
+function doCalc(){
+  if(!curP)return;
+  let qty=parseInt(document.getElementById('qty').value)||1;
+  let margin=parseFloat(document.getElementById('margin').value)||0;
+  let r=calc(curP,qty,margin);
+
+  document.getElementById('rArt').textContent=curP.article;
+  let displayTotal=qty>1?r.total:r.unit;
+  document.getElementById('rPrice').textContent=displayTotal.toLocaleString('ru-RU')+' руб.';
+  document.getElementById('rSub').textContent=qty>1?`${r.unit.toLocaleString('ru-RU')} руб/шт × ${qty} шт`:'за 1 штуку';
+
+  let tbody=document.getElementById('rBody');
+  tbody.innerHTML=r.lines.map(l=>{
+    if(l.group)return`<tr class="group"><td colspan="2">${l.name}</td></tr>`;
+    if(!l.name)return`<tr><td colspan="2" style="height:8px;border:none"></td></tr>`;
+    let cls=l.total?'total':l.sub?'sub':l.discount?'discount':'';
+    let v=typeof l.value==='number'?(l.value<0?'−'+Math.abs(l.value).toLocaleString('ru-RU'):l.value.toLocaleString('ru-RU')):'';
+    return`<tr class="${cls}"><td>${l.name}</td><td>${v}</td></tr>`;
+  }).join('');
+
+  document.getElementById('resultCard').classList.add('show');
+  document.getElementById('resultCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyResult(){
+  let art=document.getElementById('rArt').textContent;
+  let price=document.getElementById('rPrice').textContent;
+  let rows=[];document.querySelectorAll('#rBody tr').forEach(tr=>{
+    let tds=tr.querySelectorAll('td');
+    if(tds.length===2&&tds[0].textContent)rows.push(tds[0].textContent+': '+tds[1].textContent);
+  });
+  let text=art+'\n'+price+'\n\n'+rows.join('\n');
+  navigator.clipboard.writeText(text).then(()=>alert('Скопировано!')).catch(()=>{});
+}
+
+// ============================================================
+//  UTILS
+// ============================================================
+function toggle(head){head.parentElement.classList.toggle('open');}
+
+// Init
+loadRef();
+addWasteRow('Труба 40×40','','6000','580','');
+addWasteRow('Уголок 40×40','','2500','460','');
+</script>
+</body>
+</html>
