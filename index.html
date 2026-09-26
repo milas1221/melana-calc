@@ -309,6 +309,8 @@ function parse(raw){
   }else{
     if(nums.length===6){L=+nums.slice(0,2)*10;W=+nums.slice(2,4)*10;H=+nums.slice(4)*10}
     else if(nums.length===7){L=+nums.slice(0,3)*10;W=+nums.slice(3,5)*10;H=+nums.slice(5)*10}
+    else if(nums.length===8){L=+nums.slice(0,3)*10;W=+nums.slice(3,6)*10;H=+nums.slice(6)*10}
+    else if(nums.length===9){L=+nums.slice(0,3)*10;W=+nums.slice(3,6)*10;H=+nums.slice(6)*10}
     else return null;
   }
   let bowls=t.bowls||(side==='2'?2:1);
