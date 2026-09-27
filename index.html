@@ -27,6 +27,12 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 header{text-align:center;padding:24px 0 16px;border-bottom:2px solid var(--accent)}
 header h1{font-size:26px;font-weight:700;letter-spacing:.5px}
 header small{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:0;margin-top:16px;border-bottom:2px solid var(--border)}
+.tab{flex:1;padding:10px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--accent2)}
+.tab-page{display:none}
+.tab-page.active{display:block}
 .card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);border:1px solid var(--border);margin-top:16px}
 .card h2{font-size:16px;margin-bottom:12px;color:var(--accent2)}
 .search-wrap{position:relative}
@@ -96,7 +102,25 @@ header small{color:var(--muted);font-size:13px}
 .ref-grid .field{margin-bottom:6px}
 .ref-grid .field label{font-size:11px}
 .ref-grid .field input{padding:6px 8px;font-size:13px}
-@media(max-width:500px){.ref-grid{grid-template-columns:1fr}.row{flex-direction:column}}
+/* Nesting visual */
+.nesting-wrap{margin-top:16px;display:none}
+.nesting-wrap.show{display:block}
+.nesting-svg{width:100%;border:1px solid var(--border);border-radius:var(--radius);background:#fff}
+.nesting-info{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+.nesting-info span{display:flex;align-items:center;gap:4px}
+.nesting-info .dot{width:12px;height:12px;border-radius:2px;display:inline-block}
+/* Docs section */
+.doc{padding:16px;font-size:13px;line-height:1.7;color:var(--ink)}
+.doc h3{font-size:15px;color:var(--accent2);margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.doc h3:first-child{margin-top:0}
+.doc p{margin-bottom:8px}
+.doc ul{margin:4px 0 12px 20px}
+.doc li{margin-bottom:3px}
+.doc .formula{background:rgba(176,141,87,.06);padding:8px 12px;border-radius:6px;font-family:'SF Mono',Menlo,monospace;font-size:12px;margin:6px 0;overflow-x:auto}
+.doc table{width:100%;border-collapse:collapse;margin:8px 0 12px;font-size:12px}
+.doc table th{text-align:left;padding:6px 8px;background:rgba(176,141,87,.08);border:1px solid var(--border);font-weight:600}
+.doc table td{padding:6px 8px;border:1px solid var(--border)}
+@media(max-width:500px){.ref-grid{grid-template-columns:1fr}.row{flex-direction:column}.tabs{font-size:12px}}
 @media print{
   .no-print{display:none!important}
   .result-card{display:block!important}
@@ -116,12 +140,8 @@ header small{color:var(--muted);font-size:13px}
   </div>
 </div>
 <script>
-// Password: melana2024 (SHA-256 hash stored, not plaintext)
-const PWD_HASH='5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8';
-async function sha256(s){const d=new TextEncoder().encode(s);const h=await crypto.subtle.digest('SHA-256',d);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');}
 async function tryUnlock(){
   const v=document.getElementById('pwdInput').value.trim();
-  const h=await sha256(v);
   if(v==='melana2024'||sessionStorage.getItem('melana_ok')==='1'){
     sessionStorage.setItem('melana_ok','1');
     document.getElementById('lockScreen').classList.add('hidden');
@@ -139,6 +159,15 @@ if(sessionStorage.getItem('melana_ok')==='1')document.getElementById('lockScreen
     <h1>MELANA<sup style="font-size:12px">&reg;</sup> Калькулятор</h1>
     <small>Быстрый расчёт себестоимости по артикулу</small>
   </header>
+
+  <!-- TABS -->
+  <div class="tabs no-print">
+    <div class="tab active" onclick="switchTab('calc')">Калькулятор</div>
+    <div class="tab" onclick="switchTab('docs')">Пояснительная записка</div>
+  </div>
+
+  <!-- ======== TAB: CALCULATOR ======== -->
+  <div class="tab-page active" id="page-calc">
 
   <!-- ===== 1. SEARCH ===== -->
   <div class="card">
@@ -197,7 +226,7 @@ if(sessionStorage.getItem('melana_ok')==='1')document.getElementById('lockScreen
   <div class="section no-print" id="refSection">
     <div class="section-head" onclick="toggle(this)">Справочник цен (настройки)</div>
     <div class="section-body">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Цены сохраняются в браузере. <a href="#" onclick="resetRef();return false" style="color:var(--accent)">Сбросить</a></p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Цены сохраняются в браузере. Данные: апрель 2026. <a href="#" onclick="resetRef();return false" style="color:var(--accent)">Сбросить</a></p>
       <div class="ref-grid" id="refGrid"></div>
     </div>
   </div>
@@ -205,7 +234,14 @@ if(sessionStorage.getItem('melana_ok')==='1')document.getElementById('lockScreen
   <!-- ===== CALCULATE BUTTON ===== -->
   <button class="calc-btn" id="calcBtn" disabled onclick="doCalc()">Рассчитать</button>
 
-  <!-- ===== 6. RESULT ===== -->
+  <!-- ===== 6. NESTING VISUALIZATION ===== -->
+  <div class="card nesting-wrap" id="nestingWrap">
+    <h2>Раскладка на листе 1250 × 2500 мм</h2>
+    <svg class="nesting-svg" id="nestingSvg" viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="nesting-info" id="nestingInfo"></div>
+  </div>
+
+  <!-- ===== 7. RESULT ===== -->
   <div class="card result-card" id="resultCard">
     <div class="total-box">
       <div class="sub" id="rArt">—</div>
@@ -218,33 +254,160 @@ if(sessionStorage.getItem('melana_ok')==='1')document.getElementById('lockScreen
       <button onclick="copyResult()">Скопировать</button>
     </div>
   </div>
+
+  </div><!-- /page-calc -->
+
+  <!-- ======== TAB: DOCS ======== -->
+  <div class="tab-page" id="page-docs">
+    <div class="card doc">
+      <h3>1. Общий принцип расчёта</h3>
+      <p>Калькулятор определяет <b>полную себестоимость</b> изделия, складывая 4 группы затрат:</p>
+      <div class="formula">Себестоимость = Материалы + Работы + Накладные + Комплектующие</div>
+      <p>Затем применяются скидка за объём и наценка:</p>
+      <div class="formula">Цена = Себестоимость × (1 − скидка%) × (1 + наценка%)</div>
+
+      <h3>2. Материалы — лист нержавеющей стали</h3>
+      <p>Основной материал — лист AISI 304. Стандартный размер <b>1250 × 2500 мм</b>.</p>
+      <table>
+        <tr><th>Толщина</th><th>Вес листа</th><th>Цена листа</th><th>Цена за кг</th></tr>
+        <tr><td>0.8 мм</td><td>19.75 кг</td><td>5 073 ₽</td><td>~257 ₽/кг</td></tr>
+        <tr><td>1.0 мм</td><td>24.69 кг</td><td>6 100 ₽</td><td>~247 ₽/кг</td></tr>
+        <tr><td>1.2 мм</td><td>29.63 кг</td><td>7 100 ₽</td><td>~240 ₽/кг</td></tr>
+      </table>
+
+      <p><b>Расчёт расхода листа:</b></p>
+      <ul>
+        <li>По артикулу определяется <b>развёртка</b> — суммарная площадь всех деталей (столешница, стенки чаши, борт, полка)</li>
+        <li>Определяется <b>кратность</b> — сколько заготовок помещается на одном листе 1250×2500</li>
+        <li>Стоимость = <code>цена_листа / кратность</code> + прочие материалы</li>
+      </ul>
+      <p><b>Пример для R6050H (600×500 мм, чаша 200 мм):</b></p>
+      <div class="formula">Развёртка ≈ 0.55 м² → кратность 4 шт/лист<br>Стоимость листа на 1 шт: 5073 / 4 = 1268 ₽<br>+ прочие материалы (фартук 3мм, подложка) ≈ 671 ₽<br>Итого материалы: ~1939 ₽</div>
+
+      <h3>3. Принципы раскладки (нестинг)</h3>
+      <p>Графика раскладки показывает схематично, как заготовки размещаются на стандартном листе.</p>
+      <ul>
+        <li><b>Врезные мойки</b> (R): развёртка включает дно + борта чаши. Кратность 4–6 в зависимости от размера</li>
+        <li><b>Накладные мойки</b> (МН/МНБ): столешница + чаша вырезаются из одного листа. Кратность 2–4</li>
+        <li><b>Столы</b> (С/СБ/СП/СПБ): столешница из одного листа, полка из другого. Кратность зависит от длины</li>
+        <li><b>Ванны</b> (ВМ/ВМПБ): аналогично накладным, но с более глубокой чашей</li>
+        <li><b>Чаши</b> (Ч/ЧР): только развёртка чаши. Высокая кратность (5–8)</li>
+        <li><b>Стеллажи</b> (СТ): каждая полка — отдельная заготовка</li>
+      </ul>
+      <p>Отход = площадь листа − площадь всех заготовок. Нормальный отход: 5–15%. Свыше 15% — повод пересмотреть раскрой.</p>
+
+      <h3>4. Работы</h3>
+      <table>
+        <tr><th>Операция</th><th>Цена</th><th>Принцип расчёта</th></tr>
+        <tr><td>Лазерная резка</td><td>90 ₽/м</td><td>Суммарная длина реза по контуру всех деталей</td></tr>
+        <tr><td>Нарезка трубы</td><td>60 ₽/рез</td><td>Количество резов для каркаса и полок</td></tr>
+        <tr><td>Гибка</td><td>150 ₽/гиб</td><td>Количество гибов (борта, стенки чаши, фартук)</td></tr>
+        <tr><td>Сварка TIG</td><td>800 ₽/м</td><td>Длина сварных швов (углы чаши, соединения)</td></tr>
+        <tr><td>Зачистка/шлифовка</td><td>300 ₽/м</td><td>Длина шлифуемых швов</td></tr>
+        <tr><td>Сборка</td><td>1 500 ₽/час</td><td>Время сборки: мойки ~0.5ч, столы/ванны ~1ч, стеллажи ~1.5ч</td></tr>
+      </table>
+
+      <h3>5. Накладные расходы</h3>
+      <p>Распределяются на единицу пропорционально, на основе фактических данных производства.</p>
+      <table>
+        <tr><th>Статья</th><th>₽/единицу</th><th>Комментарий</th></tr>
+        <tr><td>Трудозатраты (ФОТ)</td><td>1 190</td><td>ФОТ 2 483 тыс.₽/мес ÷ выпуск ~2 086 шт/мес</td></tr>
+        <tr><td>Амортизация</td><td>255</td><td>Оборудование: лазер, листогиб, прессы, сварка</td></tr>
+        <tr><td>Аренда</td><td>232</td><td>Производственные помещения</td></tr>
+        <tr><td>Абразивы</td><td>233</td><td>Шлифовальные круги, ленты, пасты</td></tr>
+        <tr><td>Аргон</td><td>71</td><td>Защитный газ для TIG-сварки</td></tr>
+        <tr><td>Азот</td><td>128</td><td>Рабочий газ лазерного раскроя</td></tr>
+        <tr><td>Электроэнергия</td><td>76</td><td>Включая агентские</td></tr>
+        <tr><td>СИЗ, расходники, проч.</td><td>67</td><td>Средства защиты, инструмент, канцелярия</td></tr>
+        <tr><td><b>Итого накладных</b></td><td><b>~2 252</b></td><td>Фактические данные апрель 2026</td></tr>
+      </table>
+
+      <h3>6. Расчёт по категориям</h3>
+
+      <p><b>Врезные мойки (R)</b> — сталь 0.8 мм. Развёртка = дно + 4 стенки чаши × кол-во чаш + крыло. Лазерный рез по всему контуру. 4 гиба на чашу. Сварка углов чаши TIG + зачистка. Комплектация: сифон, крепления, шумоизоляция.</p>
+
+      <p><b>Накладные мойки (МН/МНБ)</b> — сталь 1.0 мм. Столешница + развёртка чаши из одного листа. Каркас из трубы 40×40. Опоры. При наличии борта — дополнительная полоса + 2 гиба. Полка — второй лист.</p>
+
+      <p><b>Чаши (Ч/ЧР)</b> — сталь 0.8 или 1.0 мм. Только развёртка чаши. Ребро жёсткости (+8% материала). 4 гиба, сварка и зачистка углов.</p>
+
+      <p><b>Столы (С/СБ/СП/СПБ)</b> — сталь 1.0 мм. Столешница + опционально борт и полка. Каркас из трубы 40×40 + 4 опоры. Минимум сварки.</p>
+
+      <p><b>Ванны моечные (ВМ/ВМБ/ВМП/ВМПБ)</b> — аналогично накладным мойкам, но с более глубокой чашей (300/400/500 мм). Больше расход листа и сварки.</p>
+
+      <p><b>Ванны моповые (МОП)</b> — сталь 1.0 мм. Корыто с 2 стенками (угловая) или 3 (закрытая). Каркас из трубы, 4 опоры.</p>
+
+      <p><b>Стеллажи (СТ)</b> — сталь 1.0 мм. Полки (3–5 шт) + каркас из трубы. 4 стойки + перемычки на каждый ярус.</p>
+
+      <h3>7. Скидки за объём</h3>
+      <table>
+        <tr><th>Кол-во</th><th>5+</th><th>10+</th><th>25+</th><th>50+</th><th>100+</th></tr>
+        <tr><td>Скидка</td><td>3%</td><td>5%</td><td>8%</td><td>12%</td><td>15%</td></tr>
+      </table>
+
+      <h3>8. Контрольные значения (апрель 2026)</h3>
+      <p>Для проверки калькулятора — фактическая себестоимость по данным производства:</p>
+      <table>
+        <tr><th>Артикул</th><th>Материалы</th><th>Полная с/с</th><th>Дилер. мин ($)</th><th>Кратн.</th></tr>
+        <tr><td>R6050H</td><td>1 939 ₽</td><td>4 091 ₽</td><td>$76.5</td><td>4</td></tr>
+        <tr><td>R5050W</td><td>1 703 ₽</td><td>3 856 ₽</td><td>$76.0</td><td>4</td></tr>
+        <tr><td>R4444H</td><td>1 476 ₽</td><td>3 628 ₽</td><td>$69.97</td><td>6</td></tr>
+        <tr><td>R3844H</td><td>1 368 ₽</td><td>3 520 ₽</td><td>$68.54</td><td>6</td></tr>
+        <tr><td>R5050H+доз</td><td>2 066 ₽</td><td>3 984 ₽</td><td>$80.0</td><td>5</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px">Курс доллара: 99.93 ₽. Источник: фактические данные производства, апрель 2026.</p>
+    </div>
+  </div><!-- /page-docs -->
+
 </div>
 
 <script>
 // ============================================================
-//  REFERENCE DEFAULTS
+//  TABS
+// ============================================================
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['calc','docs'][i]===id));
+  document.querySelectorAll('.tab-page').forEach((p,i)=>p.classList.toggle('active',['calc','docs'][i]===id));
+}
+
+// ============================================================
+//  REFERENCE DEFAULTS (factual data April 2026)
 // ============================================================
 const DEF = {
-  sheet08:370, sheet10:355, sheet12:340, density:7930,
+  // Sheet prices (per kg, AISI 304)
+  sheet08:257, sheet10:247, sheet12:240, density:7930,
+  // Sheet per sheet (for nesting)
+  sheetCost08:5073, sheetCost10:6100, sheetCost12:7100,
+  sheetW:19.75, sheetW10:24.69, sheetW12:29.63,
+  // Frame
   tube40:580, tube30:420, angle40:460, tubeStd:6000, angleStd:2500, foot:85,
+  // Operations
   laser:90, sawCut:60, bendCost:150, weld:800, grind:300, assemblyHr:1500,
+  // Overhead (per unit, factual)
+  overLabor:1190, overDepr:255, overRent:232, overAbrasive:233,
+  overArgon:71, overNitrogen:128, overElectric:76, overOther:67,
+  // Accessories
   siphon:380, clips:250, sound:320, dispenser:650, colander:480,
+  // Volume discounts
   disc5:3, disc10:5, disc25:8, disc50:12, disc100:15
 };
 const REF_META = [
   ['Лист 0.8мм, р/кг','sheet08'],['Лист 1.0мм, р/кг','sheet10'],['Лист 1.2мм, р/кг','sheet12'],['Плотность, кг/м3','density'],
+  ['Лист 0.8 (целый), р','sheetCost08'],['Лист 1.0 (целый), р','sheetCost10'],['Лист 1.2 (целый), р','sheetCost12'],
   ['Труба 40×40, р/м','tube40'],['Труба 30×30, р/м','tube30'],['Уголок 40×40, р/м','angle40'],
   ['Труба стандарт, мм','tubeStd'],['Уголок стандарт, мм','angleStd'],['Опора, р/шт','foot'],
   ['Лазер, р/м','laser'],['Нарезка, р/рез','sawCut'],['Гибка, р/гиб','bendCost'],
   ['Сварка TIG, р/м','weld'],['Зачистка, р/м','grind'],['Сборка, р/час','assemblyHr'],
+  ['Накл: ФОТ, р/шт','overLabor'],['Накл: Аморт., р/шт','overDepr'],['Накл: Аренда, р/шт','overRent'],
+  ['Накл: Абразивы, р/шт','overAbrasive'],['Накл: Аргон, р/шт','overArgon'],['Накл: Азот, р/шт','overNitrogen'],
+  ['Накл: Электр., р/шт','overElectric'],['Накл: Прочее, р/шт','overOther'],
   ['Сифон, р/шт','siphon'],['Крепл. врезной, р','clips'],['Шумоизол., р','sound'],
   ['Дозатор, р','dispenser'],['Коландер, р','colander'],
   ['Скидка 5+шт %','disc5'],['Скидка 10+шт %','disc10'],['Скидка 25+шт %','disc25'],['Скидка 50+шт %','disc50'],['Скидка 100+шт %','disc100']
 ];
 let R = {...DEF};
-function loadRef(){try{let s=localStorage.getItem('melana_ref2');if(s)R={...DEF,...JSON.parse(s)}}catch(e){} renderRef();}
-function saveRef(){document.querySelectorAll('[data-r]').forEach(i=>{R[i.dataset.r]=parseFloat(i.value)||0});localStorage.setItem('melana_ref2',JSON.stringify(R));}
-function resetRef(){R={...DEF};localStorage.removeItem('melana_ref2');renderRef();}
+function loadRef(){try{let s=localStorage.getItem('melana_ref3');if(s)R={...DEF,...JSON.parse(s)}}catch(e){} renderRef();}
+function saveRef(){document.querySelectorAll('[data-r]').forEach(i=>{R[i.dataset.r]=parseFloat(i.value)||0});localStorage.setItem('melana_ref3',JSON.stringify(R));}
+function resetRef(){R={...DEF};localStorage.removeItem('melana_ref3');renderRef();}
 function renderRef(){
   let g=document.getElementById('refGrid');
   g.innerHTML=REF_META.map(([l,k])=>`<div class="field"><label>${l}</label><input type="number" data-r="${k}" value="${R[k]}" onchange="saveRef()"></div>`).join('');
@@ -279,18 +442,22 @@ const TKEYS=Object.keys(TYPES).sort((a,b)=>b.length-a.length);
 function parse(raw){
   if(!raw||raw.length<3)return null;
   let art=raw.trim().toUpperCase().replace(/\s+/g,' ');
-  let hasDisp=/ДОЗАТОР/i.test(art), hasCol=/КОЛАНДЕР/i.test(art);
+  let hasDisp=/ДОЗАТОР|ДОЗ/i.test(raw), hasCol=/КОЛАНДЕР/i.test(raw);
   let clean=art.replace(/\s*(ПрофЛайн|ПрофМед|ПрофФаб|ПрофСтол|ПрофМоп|ПрофВанна|ПрофСтелл|Юник)\s*/gi,'')
-    .replace(/\s*\+\s*(ДОЗАТОР|КОЛАНДЕР)\s*/gi,'');
-  let bowlOvr=0; let bm=art.match(/ЧАША\s*(\d+)\s*ММ/i); if(bm)bowlOvr=+bm[1];
+    .replace(/\s*\+\s*(ДОЗАТОР|ДОЗ|КОЛАНДЕР)\s*/gi,'').replace(/\s*ЧАША\s*\d+\s*ММ\s*/gi,'');
+  let bowlOvr=0; let bm=raw.match(/ЧАША\s*(\d+)\s*ММ/i); if(bm)bowlOvr=+bm[1];
+  // MLN- prefix support
+  let mlnMatch=clean.match(/^MLN-?(R\w+)/i);
+  if(mlnMatch)clean=mlnMatch[1];
   let tk=null,rem='';
   for(let p of TKEYS){let u=p.toUpperCase();if(clean.startsWith(u)){tk=p;rem=clean.slice(u.length).trim();break;}}
   if(!tk)return null;
   let t=TYPES[tk];
-  let side=/-Л\b|\(L\)/i.test(art)?'L':/-П\b|\(R\)/i.test(art)?'R':/-2\b/.test(art)?'2':null;
-  let exec=/-У\b/i.test(art)?'corner':/-З\b/i.test(art)?'closed':null;
-  let thick=/-0[,.]8\b/.test(art)?0.8:/-1[,.]2\b/.test(art)?1.2:1.0;
-  let shelves=0;if(t.cat==='shelf'){let m=art.match(/-(\d)\s*$/);if(!m)m=art.match(/-(\d)\s+/);shelves=m?+m[1]:4;}
+  let side=/-Л\b|\(L\)/i.test(raw)?'L':/-П\b|\(R\)/i.test(raw)?'R':/-2\b/.test(raw)?'2':null;
+  let exec=/-У\b/i.test(raw)?'corner':/-З\b/i.test(raw)?'closed':null;
+  let thick=/-0[,.]8\b/.test(raw)?0.8:/-1[,.]2\b/.test(raw)?1.2:1.0;
+  if(t.cat==='rinse')thick=0.8;
+  let shelves=0;if(t.cat==='shelf'){let m=raw.match(/-(\d)\s*$/);if(!m)m=raw.match(/-(\d)\s+/);shelves=m?+m[1]:4;}
   let nums=rem.replace(/-.*$/,'').replace(/[^\d]/g,'');
   if(nums.length<4)return null;
   let L,W,H;
@@ -315,7 +482,7 @@ function parse(raw){
   }
   let bowls=t.bowls||(side==='2'?2:1);
   let bd=bowlOvr||((t.cat==='rinse'||t.cat==='overlay'||t.cat==='bowl')?H:(t.cat==='bath'?300:H));
-  let ser=t.ser;if(/ЮНИК/i.test(art))ser='Юник';
+  let ser=t.ser;if(/ЮНИК/i.test(raw))ser='Юник';
   return{article:art,tk,t,ser,L,W,H,bd,bowls,side,exec,thick,shelves,hasDisp,hasCol,cat:t.cat};
 }
 
@@ -329,6 +496,8 @@ function genCatalog(){
     a(s+' ПрофЛайн','Мойка врезная');
   for(let s of['R4254HK','R5254HK','R6254HK'])a(s+' Юник','Мойка врезная Юник');
   a('RS6151HL ПрофЛайн','Двухчашевая, лево');a('RS6151HR ПрофЛайн','Двухчашевая, право');a('RS8045H ПрофЛайн','Двухчашевая');
+  // With dispenser
+  for(let s of['R44485H','R5045H','R5050H','R6050H'])a(s+'+доз ПрофЛайн','Врезная с дозатором');
   // Overlay sinks
   for(let p of['МН','МНБ'])for(let d of[20,25,30])for(let w of[50,60])for(let l of[50,60,80,100,120]){
     let b=p+(l>=100?l:('0'+l))+('0'+w)+('0'+d);let dn=p==='МНБ'?'Накладная с бортом':'Накладная';
@@ -413,7 +582,6 @@ function showOptions(p){
   let c=p.cat;
   let h='';
 
-  // Common: custom dimensions override
   h+=`<div class="section open"><div class="section-head" onclick="toggle(this)">Параметры изделия</div><div class="section-body">`;
   h+=`<div class="row">`;
   h+=`<div class="field"><label>Длина (мм)</label><input type="number" id="oL" value="${p.L}" placeholder="${p.L}"></div>`;
@@ -425,7 +593,6 @@ function showOptions(p){
     h+=`<div class="field"><label>Высота (мм)</label><input type="number" id="oH" value="${p.H}" placeholder="${p.H}"></div>`;
   h+=`</div>`;
 
-  // Category-specific fields
   if(c==='overlay'||c==='bath'){
     h+=`<div class="row" style="margin-top:8px">`;
     h+=`<div class="field"><label>Кол-во чаш</label><select id="oBowls"><option value="1"${p.bowls===1?' selected':''}>1</option><option value="2"${p.bowls===2?' selected':''}>2</option></select></div>`;
@@ -462,7 +629,6 @@ function showOptions(p){
     h+=`</div>`;
   }
 
-  // Universal: extra shelf
   if(c!=='shelf'&&c!=='bowl'&&c!=='rinse'){
     h+=`<div class="field" style="margin-top:8px"><label>Доп. полка (длина мм) — 0 = нет</label><input type="number" id="oExtra" value="0" min="0"></div>`;
   }
@@ -534,14 +700,134 @@ function getWasteLines(){
 }
 
 // ============================================================
+//  NESTING VISUALIZATION
+// ============================================================
+function calcNesting(p, Lmm, Wmm, thick){
+  const sheetL=2500, sheetW=1250;
+  // Determine blank size (unfolded)
+  let blankL, blankW;
+  let bd = p.bd || p.H || 200;
+
+  if(p.cat==='rinse'){
+    // Blank includes bowl unfolded + flanges
+    blankL = Lmm + 40; // small margin for flanges
+    blankW = Wmm + 40;
+  } else if(p.cat==='bowl'){
+    blankL = Lmm + bd*2 + 20;
+    blankW = Wmm + bd*2 + 20;
+  } else if(p.cat==='overlay' || p.cat==='bath'){
+    blankL = Lmm + 40;
+    blankW = Wmm + 40;
+  } else if(p.cat==='table'){
+    blankL = Lmm + 40;
+    blankW = Wmm + 40;
+  } else if(p.cat==='mop'){
+    blankL = Lmm + p.H*2 + 20;
+    blankW = Wmm + p.H + 20;
+  } else if(p.cat==='shelf'){
+    blankL = Lmm + 20;
+    blankW = Wmm + 20;
+  } else {
+    blankL = Lmm + 20;
+    blankW = Wmm + 20;
+  }
+
+  // Try both orientations
+  let fitA = Math.floor(sheetL/blankL) * Math.floor(sheetW/blankW);
+  let fitB = Math.floor(sheetL/blankW) * Math.floor(sheetW/blankL);
+
+  let best, usedL, usedW, colsL, rowsW;
+  if(fitA >= fitB){
+    colsL = Math.floor(sheetL/blankL);
+    rowsW = Math.floor(sheetW/blankW);
+    best = fitA;
+    usedL = blankL;
+    usedW = blankW;
+  } else {
+    colsL = Math.floor(sheetL/blankW);
+    rowsW = Math.floor(sheetW/blankL);
+    best = fitB;
+    usedL = blankW;
+    usedW = blankL;
+    // swap blank dims for drawing
+    [blankL, blankW] = [blankW, blankL];
+  }
+
+  if(best < 1) best = 1;
+
+  let usedArea = best * blankL * blankW;
+  let totalArea = sheetL * sheetW;
+  let wastePct = ((totalArea - usedArea) / totalArea * 100).toFixed(1);
+
+  return { blankL, blankW, colsL, rowsW, count: best, wastePct, sheetL, sheetW };
+}
+
+function drawNesting(n){
+  const svg = document.getElementById('nestingSvg');
+  const pad = 10;
+  const svgW = 500, svgH = 250;
+  const scaleX = (svgW - pad*2) / n.sheetL;
+  const scaleY = (svgH - pad*2) / n.sheetW;
+  const scale = Math.min(scaleX, scaleY);
+
+  const drawW = n.sheetL * scale;
+  const drawH = n.sheetW * scale;
+  const ox = (svgW - drawW) / 2;
+  const oy = (svgH - drawH) / 2;
+
+  let html = '';
+  // Sheet background
+  html += `<rect x="${ox}" y="${oy}" width="${drawW}" height="${drawH}" fill="#f0ebe3" stroke="#8b6f3a" stroke-width="1.5" rx="2"/>`;
+  // Sheet label
+  html += `<text x="${ox+drawW/2}" y="${oy-4}" text-anchor="middle" font-size="10" fill="#666">Лист 1250 × 2500 мм</text>`;
+
+  // Blanks
+  const gap = 2;
+  const colors = ['#b08d57','#c4a46c','#d4b87e','#a07a48','#8b6f3a','#c9a960'];
+  for(let c=0; c<n.colsL; c++){
+    for(let r=0; r<n.rowsW; r++){
+      let x = ox + c * n.blankL * scale + gap;
+      let y = oy + r * n.blankW * scale + gap;
+      let w = n.blankL * scale - gap*2;
+      let h = n.blankW * scale - gap*2;
+      let ci = (c + r) % colors.length;
+      html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${colors[ci]}" fill-opacity="0.3" stroke="${colors[ci]}" stroke-width="1" rx="2"/>`;
+      // Label
+      let num = c * n.rowsW + r + 1;
+      if(w > 20 && h > 14){
+        html += `<text x="${x+w/2}" y="${y+h/2+4}" text-anchor="middle" font-size="${Math.min(12, h*0.4)}" fill="#4a3a20" font-weight="600">${num}</text>`;
+      }
+    }
+  }
+
+  // Dimensions on edges
+  html += `<text x="${ox+drawW+4}" y="${oy+drawH/2}" font-size="9" fill="#999" transform="rotate(90,${ox+drawW+4},${oy+drawH/2})">${n.sheetW} мм</text>`;
+
+  svg.innerHTML = html;
+
+  // Info
+  let info = document.getElementById('nestingInfo');
+  let wasteCls = parseFloat(n.wastePct) > 15 ? 'waste-pct' : 'good-pct';
+  info.innerHTML = `
+    <span><span class="dot" style="background:#b08d57;opacity:.3;border:1px solid #b08d57"></span> Заготовка ${n.blankL}×${n.blankW} мм</span>
+    <span><b>${n.count} шт</b> на лист</span>
+    <span class="${wasteCls}">Отход: ${n.wastePct}%</span>
+  `;
+}
+
+// ============================================================
 //  PRICING ENGINE
 // ============================================================
 function sheetW(area,th){return area*(th/1000)*R.density;}
-function sheetP(area,th){let k=th<=0.8?'sheet08':th<=1.0?'sheet10':'sheet12';return sheetW(area,th)*R[k];}
+function sheetCostByNesting(p, Lmm, Wmm, thick){
+  // Calculate using nesting: cost = sheet_price / count
+  let n = calcNesting(p, Lmm, Wmm, thick);
+  let sheetPrice = thick <= 0.8 ? R.sheetCost08 : thick <= 1.0 ? R.sheetCost10 : R.sheetCost12;
+  return { costPerUnit: sheetPrice / n.count, nesting: n, sheetPrice };
+}
 
 function calc(p,qty,margin){
   let el=k=>document.getElementById(k);
-  // Read overrides from product options
   let L=(parseFloat(el('oL')?.value)||p.L)/1000;
   let W=(parseFloat(el('oW')?.value)||p.W)/1000;
   let H=(parseFloat(el('oH')?.value)||p.H)/1000;
@@ -558,10 +844,11 @@ function calc(p,qty,margin){
   let hasCol=parseInt(el('oCol')?.value)||p.hasCol?1:0;
   let cat=p.cat;
 
-  let lines=[]; // {name, value, group?, sub?, total?, discount?}
+  let Lmm = L*1000, Wmm = W*1000;
+  let lines=[];
   let sheet=0, laserM=0, bends=0, weldM=0, grindM=0, sawCuts=0, frameM=0, legs=0, assemblyH=0.5;
 
-  // --- SHEET ---
+  // --- SHEET AREA CALCULATION ---
   if(cat==='rinse'){
     thick=0.8;
     let bL=L*0.85,bW=W*0.85;
@@ -596,9 +883,25 @@ function calc(p,qty,margin){
   }
   if(extraShelf>0){sheet+=extraShelf*W;laserM+=(extraShelf+W)*2;bends+=4;}
 
-  // Costs
-  let sheetKg=sheetW(sheet,thick);
-  let cSheet=sheetP(sheet,thick);
+  // --- NESTING-BASED SHEET COST ---
+  let nestData = calcNesting(p, Lmm, Wmm, thick);
+  let sheetPrice = thick <= 0.8 ? R.sheetCost08 : thick <= 1.0 ? R.sheetCost10 : R.sheetCost12;
+  let cSheetNesting = sheetPrice / nestData.count;
+
+  // Additional material costs (other steel parts not from main sheet)
+  let sheetKg = sheetW(sheet, thick);
+  let cSheetCalc = sheetKg * (thick<=0.8?R.sheet08:thick<=1.0?R.sheet10:R.sheet12);
+  // Use nesting-based cost for main sheet, add delta for extra parts
+  let cSheet = cSheetNesting;
+  // If calculated area suggests more material than one nesting piece, add the extra
+  let nestingPieceArea = (nestData.blankL/1000) * (nestData.blankW/1000);
+  if(sheet > nestingPieceArea * 1.2){
+    // Extra material beyond the main blank
+    let extraArea = sheet - nestingPieceArea;
+    let extraKg = extraArea * (thick/1000) * R.density;
+    cSheet += extraKg * (thick<=0.8?R.sheet08:thick<=1.0?R.sheet10:R.sheet12);
+  }
+
   let cFrame=frameM*R.tube40+legs*R.foot;
   let cLaser=laserM*R.laser;
   let cSaw=sawCuts*R.sawCut;
@@ -607,9 +910,12 @@ function calc(p,qty,margin){
   let cGrind=grindM*R.grind;
   let cAssembly=assemblyH*R.assemblyHr;
 
+  // --- OVERHEAD ---
+  let cOverhead = R.overLabor + R.overDepr + R.overRent + R.overAbrasive + R.overArgon + R.overNitrogen + R.overElectric + R.overOther;
+
   // --- BUILD BREAKDOWN ---
   lines.push({name:'Материалы',group:1});
-  lines.push({name:`Лист ${thick}мм — ${sheet.toFixed(3)} м² (${sheetKg.toFixed(1)} кг)`,value:Math.round(cSheet),sub:1});
+  lines.push({name:`Лист ${thick}мм — ${nestData.count} шт/лист (${sheetKg.toFixed(1)} кг)`,value:Math.round(cSheet),sub:1});
   if(frameM>0)lines.push({name:`Каркас — ${frameM.toFixed(2)} м трубы`,value:Math.round(cFrame),sub:1});
   if(legs>0)lines.push({name:`Опоры × ${legs}`,value:Math.round(legs*R.foot),sub:1});
 
@@ -621,11 +927,20 @@ function calc(p,qty,margin){
   if(grindM>0.01)lines.push({name:`Зачистка — ${grindM.toFixed(2)} м`,value:Math.round(cGrind),sub:1});
   lines.push({name:`Сборка — ${assemblyH} ч`,value:Math.round(cAssembly),sub:1});
 
+  // Overhead
+  lines.push({name:'Накладные расходы',group:1});
+  lines.push({name:'ФОТ (трудозатраты)',value:Math.round(R.overLabor),sub:1});
+  lines.push({name:'Амортизация',value:Math.round(R.overDepr),sub:1});
+  lines.push({name:'Аренда',value:Math.round(R.overRent),sub:1});
+  lines.push({name:'Абразивы',value:Math.round(R.overAbrasive),sub:1});
+  lines.push({name:'Газы (аргон + азот)',value:Math.round(R.overArgon + R.overNitrogen),sub:1});
+  lines.push({name:'Электроэнергия + прочее',value:Math.round(R.overElectric + R.overOther),sub:1});
+
   // Extras
   let cExtras=0;
   let extLines=[];
   if(cat!=='bowl'){
-    let sc=bowls;if(cat==='rinse')sc=bowls;else if(cat==='table'||cat==='shelf'||cat==='mop')sc=0;else sc=bowls;
+    let sc=bowls;if(cat==='table'||cat==='shelf'||cat==='mop')sc=0;
     if(sc>0){extLines.push({name:`Сифон × ${sc}`,value:Math.round(sc*R.siphon),sub:1});cExtras+=sc*R.siphon;}
   }
   if(cat==='rinse'){
@@ -636,7 +951,7 @@ function calc(p,qty,margin){
   if(hasCol){extLines.push({name:'Коландер',value:Math.round(R.colander),sub:1});cExtras+=R.colander;}
   if(extLines.length){lines.push({name:'Комплектующие',group:1});lines.push(...extLines);}
 
-  // Waste rows (from the universal waste table)
+  // Waste rows
   let wasteLines=getWasteLines();
   let wasteCost=0;
   if(wasteLines.length){
@@ -644,7 +959,7 @@ function calc(p,qty,margin){
     wasteLines.forEach(wl=>{lines.push({name:wl.name,value:wl.value,sub:1});wasteCost+=wl.value;});
   }
 
-  let costUnit=cSheet+cFrame+cLaser+cSaw+cBend+cWeld+cGrind+cAssembly+cExtras+wasteCost;
+  let costUnit=cSheet+cFrame+cLaser+cSaw+cBend+cWeld+cGrind+cAssembly+cOverhead+cExtras+wasteCost;
   let disc=0;
   if(qty>=100)disc=R.disc100;else if(qty>=50)disc=R.disc50;else if(qty>=25)disc=R.disc25;else if(qty>=10)disc=R.disc10;else if(qty>=5)disc=R.disc5;
   let afterDisc=costUnit*(1-disc/100);
@@ -658,7 +973,7 @@ function calc(p,qty,margin){
   lines.push({name:'Цена за 1 шт',value:Math.round(withMargin),total:1});
   if(qty>1)lines.push({name:`ИТОГО за ${qty} шт`,value:Math.round(total),total:1});
 
-  return{lines,unit:Math.round(withMargin),total:Math.round(total),qty};
+  return{lines,unit:Math.round(withMargin),total:Math.round(total),qty,nesting:nestData};
 }
 
 // ============================================================
@@ -669,6 +984,10 @@ function doCalc(){
   let qty=parseInt(document.getElementById('qty').value)||1;
   let margin=parseFloat(document.getElementById('margin').value)||0;
   let r=calc(curP,qty,margin);
+
+  // Show nesting
+  drawNesting(r.nesting);
+  document.getElementById('nestingWrap').classList.add('show');
 
   document.getElementById('rArt').textContent=curP.article;
   let displayTotal=qty>1?r.total:r.unit;
