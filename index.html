@@ -474,9 +474,19 @@ function parse(raw){
     else{L=+nums.slice(0,3);W=+nums.slice(3)}
     H=200;
   }else if(t.cat==='bowl'){
-    if(nums.length>=9){L=+nums.slice(0,3)*10;W=+nums.slice(3,6)*10;H=+nums.slice(6,9)*10;}
-    else if(nums.length>=7){L=+nums.slice(0,3)*10;W=+nums.slice(3,5)*10;H=+nums.slice(5,7)*10;}
-    else{L=+nums.slice(0,2)*10;W=+nums.slice(2,4)*10;H=+nums.slice(4,6)*10;}
+    if(nums.length>=9){
+      // Try ×10 encoding first (e.g. 045045020 → 450×450×200)
+      let l1=+nums.slice(0,3)*10, w1=+nums.slice(3,6)*10, h1=+nums.slice(6,9)*10;
+      // Try raw mm encoding (e.g. 160245150 → 160×245×150)
+      let l2=+nums.slice(0,3), w2=+nums.slice(3,6), h2=+nums.slice(6,9);
+      if(l1>=50&&l1<=2000&&w1>=50&&w1<=2000&&h1>=50&&h1<=1000){L=l1;W=w1;H=h1;}
+      else if(l2>=50&&l2<=2000&&w2>=50&&w2<=2000&&h2>=50&&h2<=1000){L=l2;W=w2;H=h2;}
+      else{L=l1;W=w1;H=h1;}
+    }else if(nums.length>=7){
+      L=+nums.slice(0,3)*10;W=+nums.slice(3,5)*10;H=+nums.slice(5,7)*10;
+    }else{
+      L=+nums.slice(0,2)*10;W=+nums.slice(2,4)*10;H=+nums.slice(4,6)*10;
+    }
   }else if(t.cat==='shelf'){
     let d=nums;if(shelves&&d.endsWith(''+shelves))d=d.slice(0,-1);
     if(d.length===7){L=+d.slice(0,2)*10;W=+d.slice(2,4)*10;H=+d.slice(4)*10}
