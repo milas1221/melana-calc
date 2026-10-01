@@ -836,15 +836,19 @@ function drawNesting(n){
     // --- BOWL: draw centrals + sides separately ---
     let cl=n.cl, cw=n.cw, sl=n.sl, sw=n.sw;
     let cCols=n.cCols, cRows=n.cRows;
+    // Only draw blanks belonging to complete bowl sets
+    let centralsLeft = n.count;        // 1 central per bowl
+    let sidesLeft = n.count * 2;       // 2 sides per bowl
     // Draw centrals
-    for(let c=0; c<cCols; c++){
-      for(let r=0; r<cRows; r++){
+    for(let c=0; c<cCols && centralsLeft>0; c++){
+      for(let r=0; r<cRows && centralsLeft>0; r++){
         let x = ox + c*cl*scale + gap;
         let y = oy + r*cw*scale + gap;
         let w = cl*scale - gap*2;
         let h = cw*scale - gap*2;
         html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#b08d57" fill-opacity="0.3" stroke="#b08d57" stroke-width="1" rx="2"/>`;
         if(w>16 && h>10) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(9,h*0.35)}" fill="#4a3a20" font-weight="600">Ц</text>`;
+        centralsLeft--;
       }
     }
     // Draw sides below centrals
@@ -852,30 +856,32 @@ function drawNesting(n){
     let remW = n.sheetW - cRows*cw;
     let sRowsBot = Math.floor(remW/sw);
     let sColsBot = Math.floor(n.sheetL/sl);
-    for(let c=0; c<sColsBot; c++){
-      for(let r=0; r<sRowsBot; r++){
+    for(let c=0; c<sColsBot && sidesLeft>0; c++){
+      for(let r=0; r<sRowsBot && sidesLeft>0; r++){
         let x = ox + c*sl*scale + gap;
         let y = sideY0 + r*sw*scale + gap;
         let w = sl*scale - gap*2;
         let h = sw*scale - gap*2;
         html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c0392b" fill-opacity="0.25" stroke="#c0392b" stroke-width="0.8" rx="1"/>`;
         if(w>12 && h>8) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(8,h*0.35)}" fill="#7a1f1f" font-weight="600">Б</text>`;
+        sidesLeft--;
       }
     }
     // Draw sides to the right of centrals
     let sideX0 = ox + cCols*cl*scale;
     let remL = n.sheetL - cCols*cl;
-    if(remL >= sl){
+    if(remL >= sl && sidesLeft > 0){
       let extraCols = Math.floor(remL/sl);
       let extraRows = Math.floor(cRows*cw/sw);
-      for(let c=0; c<extraCols; c++){
-        for(let r=0; r<extraRows; r++){
+      for(let c=0; c<extraCols && sidesLeft>0; c++){
+        for(let r=0; r<extraRows && sidesLeft>0; r++){
           let x = sideX0 + c*sl*scale + gap;
           let y = oy + r*sw*scale + gap;
           let w = sl*scale - gap*2;
           let h = sw*scale - gap*2;
           html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c0392b" fill-opacity="0.25" stroke="#c0392b" stroke-width="0.8" rx="1"/>`;
           if(w>12 && h>8) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(8,h*0.35)}" fill="#7a1f1f" font-weight="600">Б</text>`;
+          sidesLeft--;
         }
       }
     }
