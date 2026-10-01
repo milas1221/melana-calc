@@ -243,23 +243,47 @@ header small{color:var(--muted);font-size:13px}
       <p><b>Расчёт расхода листа:</b></p>
       <ul>
         <li>По артикулу определяется <b>развёртка</b> — суммарная площадь всех деталей (столешница, стенки чаши, борт, полка)</li>
-        <li>Определяется <b>кратность</b> — сколько заготовок помещается на одном листе 1250×2500</li>
+        <li>Определяется <b>кратность</b> — сколько целых изделий получается с одного листа 1250×2500</li>
         <li>Стоимость = <code>цена_листа / кратность</code> + прочие материалы</li>
       </ul>
       <p><b>Пример для R6050H (600×500 мм, чаша 200 мм):</b></p>
       <div class="formula">Развёртка ≈ 0.55 м² → кратность 4 шт/лист<br>Стоимость листа на 1 шт: 5073 / 4 = 1268 ₽<br>+ прочие материалы (фартук 3мм, подложка) ≈ 671 ₽<br>Итого материалы: ~1939 ₽</div>
 
       <h3>3. Принципы раскладки (нестинг)</h3>
-      <p>Графика раскладки показывает схематично, как заготовки размещаются на стандартном листе.</p>
+      <p>Для <b>любого</b> изделия калькулятор сначала раскладывает его на отдельные заготовки (развёртки),
+      а затем укладывает их на стандартный лист 1250×2500 мм. На схеме каждая заготовка показана своим цветом и меткой.</p>
+
+      <p><b>Из чего состоит изделие — по категориям:</b></p>
+      <table>
+        <tr><th>Категория</th><th>Заготовки</th><th>Формула развёртки</th></tr>
+        <tr><td>Чаша (Ч/ЧР)</td><td>Ц ×1, Б ×2</td>
+            <td>Ц = (Д−5.2) × (Ш+смещение)<br>Б = (глубина−7.14) × (Ш−6)</td></tr>
+        <tr><td>Мойка врезная (R/RS)</td><td>Ц ×1, Б ×2</td>
+            <td>То же + фланец 18 мм на сторону по периметру центральной</td></tr>
+        <tr><td>Мойка накладная (МН/МНБ)<br>Ванна моечная (ВМ…)</td><td>СТ ×1, Ц ×N чаш, Б ×2N,<br>+БО, +П</td>
+            <td>СТ = (Д+80) × (Ш+80) — загиб 40 мм на сторону<br>Чаша: Шч = 0.7·Ш, Дч = min(0.6·Д; 500)</td></tr>
+        <tr><td>Стол (С/СБ/СП/СПБ)</td><td>СТ ×1, +БО, +П</td>
+            <td>СТ = (Д+80) × (Ш+80)<br>БО = Д × 190 (борт 150 + загиб 40)<br>П = (Д−100+80) × (Ш−100+80)</td></tr>
+        <tr><td>Ванна моповая (МОП)</td><td>Ц ×1, Б ×2 (угл.) или ×3 (закр.)</td>
+            <td>Ц = (Д−5.2) × (Ш+смещение по высоте)<br>Б = (В−7.14) × (Ш−6)</td></tr>
+        <tr><td>Стеллаж (СТ)</td><td>П × кол-во полок</td>
+            <td>П = (Д+80) × (Ш+80) на каждый ярус</td></tr>
+      </table>
+      <p style="font-size:11px;color:var(--muted)">Ц — центральная, Б — боковая, СТ — столешница, БО — борт, П — полка.
+      Смещение по глубине: 150 мм → +278.92; 200 мм → +378.92; 300 мм → +478.92 (данные производства).</p>
+
+      <p><b>Как укладываются заготовки:</b></p>
       <ul>
-        <li><b>Врезные мойки</b> (R): развёртка включает дно + борта чаши. Кратность 4–6 в зависимости от размера</li>
-        <li><b>Накладные мойки</b> (МН/МНБ): столешница + чаша вырезаются из одного листа. Кратность 2–4</li>
-        <li><b>Столы</b> (С/СБ/СП/СПБ): столешница из одного листа, полка из другого. Кратность зависит от длины</li>
-        <li><b>Ванны</b> (ВМ/ВМПБ): аналогично накладным, но с более глубокой чашей</li>
-        <li><b>Чаши</b> (Ч/ЧР): 3 заготовки на чашу (1 центр. + 2 бок.), размещаются на листе с учётом направления сатинирования</li>
-        <li><b>Стеллажи</b> (СТ): каждая полка — отдельная заготовка</li>
+        <li>Заготовки укладываются <b>комплектами</b>: на схеме показаны только те детали, из которых собирается целое изделие. Всё, что осталось, — отход.</li>
+        <li>Сначала размещается самая крупная заготовка, затем в остатки листа вкладываются более мелкие (гильотинный раскрой).</li>
+        <li>Калькулятор подбирает <b>партию</b> с лучшим выходом: иногда 3 изделия с 2 листов выгоднее, чем 1 с 1 листа. Показывается найденная партия и выход шт/лист.</li>
+        <li>Если изделие не помещается на один лист (например, столешница 1480 мм + полка), схема показывает несколько листов.</li>
+        <li>Направление сатинирования — вдоль длинной стороны листа (стрелка под схемой).</li>
       </ul>
-      <p>Отход = площадь листа − площадь всех заготовок. Нормальный отход: 5–15%. Свыше 15% — повод пересмотреть раскрой.</p>
+      <p>Отход = площадь листов партии − площадь всех заготовок партии. Нормальный отход 5–15%.
+      Для крупных столешниц (шире 585 мм) отход физически выше: при ширине листа 1250 мм два таких изделия в ряд не встают.</p>
+      <p style="font-size:11px;color:var(--muted)">Схема — ориентир по принципу раскроя, без претензии на производственную точность
+      (не учитывает зазоры между деталями, заходы лазера и ограничения конкретной программы ЧПУ).</p>
 
       <h3>4. Работы</h3>
       <table>
@@ -701,237 +725,242 @@ function bowlBlanks(Lmm, Wmm, depthMm){
   };
 }
 
+// --- Technological constants ---
+const BEND_EDGE = 40;      // загиб по периметру столешницы/полки, мм на сторону
+const FLANGE_INSET = 18;   // фланец врезной мойки, мм на сторону
+const BORT_H = 150;        // высота борта, мм
+const SHELF_INSET = 100;   // полка уже столешницы на, мм
+
+// Blanks for any product category. Returns [{key,label,name,l,w,per}]
+function productBlanks(p, Lmm, Wmm, Hmm, bdMm, o){
+  o = o || {};
+  const cat = p.cat;
+  const bowls = o.bowls || 1;
+
+  if(cat === 'bowl') return [
+    {key:'c',label:'Ц',name:'Центральная',l:Lmm-5.2,            w:Wmm+bowlDepthOffset(bdMm), per:1},
+    {key:'s',label:'Б',name:'Боковая',    l:bdMm-7.14,          w:Wmm-6,                     per:2}
+  ];
+
+  if(cat === 'rinse') return [
+    {key:'c',label:'Ц',name:'Центральная + фланец',l:Lmm-5.2+2*FLANGE_INSET, w:Wmm+bowlDepthOffset(bdMm)+2*FLANGE_INSET, per:1},
+    {key:'s',label:'Б',name:'Боковая',             l:bdMm-7.14,              w:Wmm-6,                                    per:2}
+  ];
+
+  if(cat === 'overlay' || cat === 'bath'){
+    let bw = Math.round(Wmm*0.7), bl = Math.round(Math.min(Lmm*0.6, 500));
+    let a = [
+      {key:'t',label:'СТ',name:'Столешница', l:Lmm+2*BEND_EDGE, w:Wmm+2*BEND_EDGE,           per:1},
+      {key:'c',label:'Ц', name:'Чаша центр.',l:bl-5.2,          w:bw+bowlDepthOffset(bdMm),  per:bowls},
+      {key:'s',label:'Б', name:'Чаша бок.',  l:bdMm-7.14,       w:bw-6,                      per:2*bowls}
+    ];
+    if(o.bort)  a.push({key:'b',label:'БО',name:'Борт', l:Lmm,                            w:BORT_H+BEND_EDGE,                per:1});
+    if(o.shelf) a.push({key:'p',label:'П', name:'Полка',l:Lmm-SHELF_INSET+2*BEND_EDGE,    w:Wmm-SHELF_INSET+2*BEND_EDGE,     per:1});
+    return a;
+  }
+
+  if(cat === 'table'){
+    let a = [{key:'t',label:'СТ',name:'Столешница',l:Lmm+2*BEND_EDGE,w:Wmm+2*BEND_EDGE,per:1}];
+    if(o.bort)  a.push({key:'b',label:'БО',name:'Борт', l:Lmm,                         w:BORT_H+BEND_EDGE,            per:1});
+    if(o.shelf) a.push({key:'p',label:'П', name:'Полка',l:Lmm-SHELF_INSET+2*BEND_EDGE, w:Wmm-SHELF_INSET+2*BEND_EDGE, per:1});
+    return a;
+  }
+
+  if(cat === 'mop') return [
+    {key:'c',label:'Ц',name:'Корыто центр.',l:Lmm-5.2,  w:Wmm+bowlDepthOffset(Hmm), per:1},
+    {key:'s',label:'Б',name:'Стенка',       l:Hmm-7.14, w:Wmm-6,                    per:o.exec==='closed'?3:2}
+  ];
+
+  if(cat === 'shelf') return [
+    {key:'p',label:'П',name:'Полка',l:Lmm+2*BEND_EDGE,w:Wmm+2*BEND_EDGE,per:o.shelves||4}
+  ];
+
+  return [{key:'t',label:'Д',name:'Деталь',l:Lmm+2*BEND_EDGE,w:Wmm+2*BEND_EDGE,per:1}];
+}
+
+// Max count of bl×bw rectangles inside a region, trying both orientations
+function fitInRegion(reg, bl, bw){
+  let c1=Math.floor(reg.l/bl), r1=Math.floor(reg.w/bw), n1=c1*r1;
+  let c2=Math.floor(reg.l/bw), r2=Math.floor(reg.w/bl), n2=c2*r2;
+  return n1>=n2 ? {n:n1,cols:c1,rows:r1,l:bl,w:bw} : {n:n2,cols:c2,rows:r2,l:bw,w:bl};
+}
+
+// Place a multiset of rectangles onto as few 1250×2500 sheets as possible.
+// items: [{key,label,l,w,qty}] → [[{key,label,x,y,cols,rows,l,w,max}, ...], ...]
+function packMulti(items, sheetL, sheetW){
+  let rem = items.map(i=>({key:i.key,label:i.label,l:i.l,w:i.w,left:i.qty}));
+  let sheets = [];
+  for(let guard=0; guard<80 && rem.some(r=>r.left>0); guard++){
+    let regions = [{x:0,y:0,l:sheetL,w:sheetW}];
+    let placed = [], any = false;
+    // biggest blanks first
+    for(let it of [...rem].sort((a,b)=> b.l*b.w - a.l*a.w)){
+      if(it.left <= 0) continue;
+      let next = [];
+      for(let reg of regions){
+        if(it.left <= 0){ next.push(reg); continue; }
+        let f = fitInRegion(reg, it.l, it.w);
+        if(f.n <= 0){ next.push(reg); continue; }
+        // trim the grid down to what is still needed
+        let cols = f.cols, rows = f.rows;
+        if(cols*rows > it.left){
+          rows = Math.min(rows, Math.ceil(it.left/cols));
+          cols = Math.min(cols, Math.ceil(it.left/rows));
+        }
+        let n = Math.min(cols*rows, it.left);
+        placed.push({key:it.key,label:it.label,x:reg.x,y:reg.y,cols,rows,l:f.l,w:f.w,max:n});
+        it.left -= n; any = true;
+        let uL = cols*f.l, uW = rows*f.w;
+        if(reg.l-uL > 0) next.push({x:reg.x+uL, y:reg.y,    l:reg.l-uL, w:reg.w});
+        if(reg.w-uW > 0) next.push({x:reg.x,    y:reg.y+uW, l:uL,       w:reg.w-uW});
+      }
+      regions = next;
+    }
+    if(!any) break;
+    sheets.push(placed);
+  }
+  return sheets;
+}
+
+// Best yield of complete products per sheet. Tries batches of k products and
+// keeps the batch with the best products-per-sheet ratio (batch nesting).
+function nestBlanks(blanks, sheetL, sheetW){
+  let defs = [...blanks].sort((a,b)=> b.l*b.w - a.l*a.w);
+  let best = null;
+
+  for(let k=1; k<=30; k++){
+    let sh = packMulti(defs.map(d=>({...d, qty:d.per*k})), sheetL, sheetW);
+    if(sh.length > 6) break;
+    let placedAll = defs.every(d => sh.reduce((s,sheet)=>
+      s + sheet.filter(pl=>pl.key===d.key).reduce((a,pl)=>a+pl.max,0), 0) >= d.per*k);
+    if(!placedAll) break;
+    let ratio = k / sh.length;
+    if(!best || ratio > best.ratio + 1e-9) best = {ratio, k, sheets:sh};
+  }
+  if(!best) best = {ratio:1, k:1, sheets:[[]]};
+
+  let setArea = defs.reduce((s,d)=> s + d.l*d.w*d.per, 0);
+  let totalArea = best.sheets.length * sheetL * sheetW;
+  return {
+    count: best.ratio,              // complete products per sheet (may be < 1)
+    batch: best.k,                  // products in the shown layout
+    sheets: best.sheets,
+    defs, sheetL, sheetW,
+    wastePct: Math.max(0, (totalArea - setArea*best.k)/totalArea*100).toFixed(1)
+  };
+}
+
 // ============================================================
 //  NESTING VISUALIZATION
 // ============================================================
-function calcNesting(p, Lmm, Wmm, thick){
-  const sheetL=2500, sheetW=1250;
-  let bd = p.bd || p.H || 200;
+function calcNesting(p, Lmm, Wmm, thick, opts){
+  const sheetL = 2500, sheetW = 1250;
+  const o = opts || {};
+  const bd = o.bd || p.bd || p.H || 200;
+  const H  = o.H  || p.H  || 850;
 
-  // --- BOWL: multi-blank nesting ---
-  if(p.cat==='bowl'){
-    let b = bowlBlanks(Lmm, Wmm, bd);
-    let cL=b.central.l, cW=b.central.w, sL=b.side.l, sW=b.side.w;
-    let best={count:0, centrals:[], sides:[], cL, cW, sL, sW};
+  const blanks = productBlanks(p, Lmm, Wmm, H, bd, {
+    bowls:   o.bowls   !== undefined ? o.bowls   : (p.bowls   || p.t?.bowls   || 1),
+    bort:    o.bort    !== undefined ? o.bort    : (p.t?.bort    ? 1 : 0),
+    shelf:   o.shelf   !== undefined ? o.shelf   : (p.t?.shelf   ? 1 : 0),
+    shelves: o.shelves !== undefined ? o.shelves : (p.shelves || 4),
+    exec:    o.exec    !== undefined ? o.exec    : (p.exec || 'corner')
+  });
 
-    // Try all orientations of central and side blanks
-    for(let cr of [false,true]){
-      let cl=cr?cW:cL, cw=cr?cL:cW;
-      for(let sr of [false,true]){
-        let sl=sr?sW:sL, sw=sr?sL:sW;
-
-        // Strategy: centrals in top rows, sides in remaining space
-        for(let cRows=1; cRows<=Math.floor(sheetW/cw); cRows++){
-          let cCols=Math.floor(sheetL/cl);
-          let nC=cRows*cCols;
-          // Sides below centrals
-          let remW=sheetW - cRows*cw;
-          let sRowsBot=Math.floor(remW/sw);
-          let sColsBot=Math.floor(sheetL/sl);
-          let nS=sRowsBot*sColsBot;
-          // Sides to the right of centrals
-          let remL=sheetL - cCols*cl;
-          if(remL>=sl){
-            let extraCols=Math.floor(remL/sl);
-            let extraRows=Math.floor(cRows*cw/sw);
-            nS+=extraCols*extraRows;
-          }
-          let bowls=Math.min(nC, Math.floor(nS/2));
-          if(bowls>best.count){
-            best={count:bowls, cl,cw,sl,sw, cRows,cCols, sRowsBot,sColsBot, nC,nS,
-              cL:b.central.l, cW:b.central.w, sL:b.side.l, sW:b.side.w, cr, sr};
-          }
-        }
-        // Strategy: centrals in left columns, sides to the right
-        for(let cCols=1; cCols<=Math.floor(sheetL/cl); cCols++){
-          let cRows=Math.floor(sheetW/cw);
-          let nC=cRows*cCols;
-          let remL=sheetL - cCols*cl;
-          let sCols=Math.floor(remL/sl);
-          let sRows=Math.floor(sheetW/sw);
-          let nS=sCols*sRows;
-          let remW=sheetW - cRows*cw;
-          if(remW>=sw){
-            let extraRows=Math.floor(remW/sw);
-            let extraCols=Math.floor(cCols*cl/sl);
-            nS+=extraRows*extraCols;
-          }
-          let bowls=Math.min(nC, Math.floor(nS/2));
-          if(bowls>best.count){
-            best={count:bowls, cl,cw,sl,sw, cRows,cCols, sRowsBot:0,sColsBot:0, nC,nS,
-              cL:b.central.l, cW:b.central.w, sL:b.side.l, sW:b.side.w, cr, sr, leftRight:true};
-          }
-        }
-      }
-    }
-    if(best.count<1) best.count=1;
-    let usedArea = best.count*(b.central.l*b.central.w + 2*b.side.l*b.side.w);
-    let wastePct = ((sheetL*sheetW - usedArea)/(sheetL*sheetW)*100).toFixed(1);
-    return { ...best, wastePct, sheetL, sheetW, isBowl:true,
-      blankL:best.cl, blankW:best.cw, colsL:best.cCols, rowsW:best.cRows };
-  }
-
-  // --- OTHER TYPES: single-blank nesting ---
-  let blankL, blankW;
-  if(p.cat==='rinse'){
-    blankL = Lmm + 40;
-    blankW = Wmm + 40;
-  } else if(p.cat==='overlay' || p.cat==='bath'){
-    blankL = Lmm + 40;
-    blankW = Wmm + 40;
-  } else if(p.cat==='table'){
-    blankL = Lmm + 40;
-    blankW = Wmm + 40;
-  } else if(p.cat==='mop'){
-    blankL = Lmm + p.H*2 + 20;
-    blankW = Wmm + p.H + 20;
-  } else if(p.cat==='shelf'){
-    blankL = Lmm + 20;
-    blankW = Wmm + 20;
-  } else {
-    blankL = Lmm + 20;
-    blankW = Wmm + 20;
-  }
-
-  let fitA = Math.floor(sheetL/blankL) * Math.floor(sheetW/blankW);
-  let fitB = Math.floor(sheetL/blankW) * Math.floor(sheetW/blankL);
-  let colsL, rowsW;
-  if(fitA >= fitB){
-    colsL = Math.floor(sheetL/blankL);
-    rowsW = Math.floor(sheetW/blankW);
-  } else {
-    colsL = Math.floor(sheetL/blankW);
-    rowsW = Math.floor(sheetW/blankL);
-    [blankL, blankW] = [blankW, blankL];
-  }
-  let best = Math.max(fitA, fitB, 1);
-  let usedArea = best * blankL * blankW;
-  let wastePct = ((sheetL*sheetW - usedArea) / (sheetL*sheetW) * 100).toFixed(1);
-  return { blankL, blankW, colsL, rowsW, count: best, wastePct, sheetL, sheetW };
+  const n = nestBlanks(blanks, sheetL, sheetW);
+  n.unitForms = {
+    bowl:   ['чаша','чаши','чаш'],
+    rinse:  ['мойка','мойки','моек'],
+    overlay:['мойка','мойки','моек'],
+    bath:   ['ванна','ванны','ванн'],
+    mop:    ['ванна','ванны','ванн'],
+    table:  ['стол','стола','столов'],
+    shelf:  ['стеллаж','стеллажа','стеллажей']
+  }[p.cat] || ['шт','шт','шт'];
+  return n;
 }
+
+// Russian plural: forms = [1, 2-4, 5+]
+function plural(n, forms){
+  let a = Math.abs(n) % 100, b = a % 10;
+  if(a > 10 && a < 20) return forms[2];
+  if(b > 1 && b < 5) return forms[1];
+  if(b === 1) return forms[0];
+  return forms[2];
+}
+
+const BLANK_COL = {
+  c:  ['#b08d57','#4a3a20'],  // центральная (чаша / корыто)
+  s:  ['#c0392b','#7a1f1f'],  // боковая / стенка
+  t:  ['#2e6f5e','#1b3f35'],  // столешница
+  b:  ['#7b5ea7','#3d2d58'],  // борт
+  p:  ['#2b6cb0','#17365c'],  // полка
+  def:['#8b6f3a','#4a3a20']
+};
 
 function drawNesting(n){
   const svg = document.getElementById('nestingSvg');
-  const pad = 10;
-  const svgW = 500, svgH = 250;
-  const scaleX = (svgW - pad*2) / n.sheetL;
-  const scaleY = (svgH - pad*2) / n.sheetW;
-  const scale = Math.min(scaleX, scaleY);
+  const info = document.getElementById('nestingInfo');
+  const sheets = n.sheets && n.sheets.length ? n.sheets : [[]];
+  const pad = 10, gap = 2;
+  const svgW = 500;
+  const sheetH = 250;                 // vertical slot per sheet
+  const svgH = sheetH * sheets.length;
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
 
+  const scale = Math.min((svgW - pad*2) / n.sheetL, (sheetH - pad*4) / n.sheetW);
   const drawW = n.sheetL * scale;
   const drawH = n.sheetW * scale;
   const ox = (svgW - drawW) / 2;
-  const oy = (svgH - drawH) / 2;
 
-  let html = '';
-  // Sheet background
-  html += `<rect x="${ox}" y="${oy}" width="${drawW}" height="${drawH}" fill="#f0ebe3" stroke="#8b6f3a" stroke-width="1.5" rx="2"/>`;
-  html += `<text x="${ox+drawW/2}" y="${oy-4}" text-anchor="middle" font-size="10" fill="#666">Лист 1250 × 2500 мм</text>`;
+  let html = `<defs><marker id="arr" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#999"/></marker></defs>`;
 
-  const gap = 2;
-  let info = document.getElementById('nestingInfo');
-  let wasteCls = parseFloat(n.wastePct) > 15 ? 'waste-pct' : 'good-pct';
+  sheets.forEach((placed, si) => {
+    const oy = si*sheetH + (sheetH - drawH)/2;
+    html += `<rect x="${ox}" y="${oy}" width="${drawW}" height="${drawH}" fill="#f0ebe3" stroke="#8b6f3a" stroke-width="1.5" rx="2"/>`;
+    let title = sheets.length > 1 ? `Лист ${si+1} из ${sheets.length} — 1250 × 2500 мм` : 'Лист 1250 × 2500 мм';
+    html += `<text x="${ox+drawW/2}" y="${oy-5}" text-anchor="middle" font-size="10" fill="#666">${title}</text>`;
 
-  if(n.isBowl){
-    // --- BOWL: draw centrals + sides separately ---
-    let cl=n.cl, cw=n.cw, sl=n.sl, sw=n.sw;
-    let cCols=n.cCols, cRows=n.cRows;
-    // Only draw blanks belonging to complete bowl sets
-    let centralsLeft = n.count;        // 1 central per bowl
-    let sidesLeft = n.count * 2;       // 2 sides per bowl
-    // Draw centrals
-    for(let c=0; c<cCols && centralsLeft>0; c++){
-      for(let r=0; r<cRows && centralsLeft>0; r++){
-        let x = ox + c*cl*scale + gap;
-        let y = oy + r*cw*scale + gap;
-        let w = cl*scale - gap*2;
-        let h = cw*scale - gap*2;
-        html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#b08d57" fill-opacity="0.3" stroke="#b08d57" stroke-width="1" rx="2"/>`;
-        if(w>16 && h>10) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(9,h*0.35)}" fill="#4a3a20" font-weight="600">Ц</text>`;
-        centralsLeft--;
-      }
-    }
-    // Draw sides below centrals
-    let sideY0 = oy + cRows*cw*scale;
-    let remW = n.sheetW - cRows*cw;
-    let sRowsBot = Math.floor(remW/sw);
-    let sColsBot = Math.floor(n.sheetL/sl);
-    for(let c=0; c<sColsBot && sidesLeft>0; c++){
-      for(let r=0; r<sRowsBot && sidesLeft>0; r++){
-        let x = ox + c*sl*scale + gap;
-        let y = sideY0 + r*sw*scale + gap;
-        let w = sl*scale - gap*2;
-        let h = sw*scale - gap*2;
-        html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c0392b" fill-opacity="0.25" stroke="#c0392b" stroke-width="0.8" rx="1"/>`;
-        if(w>12 && h>8) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(8,h*0.35)}" fill="#7a1f1f" font-weight="600">Б</text>`;
-        sidesLeft--;
-      }
-    }
-    // Draw sides to the right of centrals
-    let sideX0 = ox + cCols*cl*scale;
-    let remL = n.sheetL - cCols*cl;
-    if(remL >= sl && sidesLeft > 0){
-      let extraCols = Math.floor(remL/sl);
-      let extraRows = Math.floor(cRows*cw/sw);
-      for(let c=0; c<extraCols && sidesLeft>0; c++){
-        for(let r=0; r<extraRows && sidesLeft>0; r++){
-          let x = sideX0 + c*sl*scale + gap;
-          let y = oy + r*sw*scale + gap;
-          let w = sl*scale - gap*2;
-          let h = sw*scale - gap*2;
-          html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#c0392b" fill-opacity="0.25" stroke="#c0392b" stroke-width="0.8" rx="1"/>`;
-          if(w>12 && h>8) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(8,h*0.35)}" fill="#7a1f1f" font-weight="600">Б</text>`;
-          sidesLeft--;
+    for(let pl of placed){
+      let col = BLANK_COL[pl.key] || BLANK_COL.def;
+      let drawn = 0;
+      for(let c=0; c<pl.cols && drawn<pl.max; c++){
+        for(let r=0; r<pl.rows && drawn<pl.max; r++){
+          let x = ox + (pl.x + c*pl.l)*scale + gap;
+          let y = oy + (pl.y + r*pl.w)*scale + gap;
+          let w = pl.l*scale - gap*2;
+          let h = pl.w*scale - gap*2;
+          drawn++;
+          if(w <= 0 || h <= 0) continue;
+          html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${col[0]}" fill-opacity="0.28" stroke="${col[0]}" stroke-width="1" rx="2"/>`;
+          if(w>14 && h>9) html += `<text x="${x+w/2}" y="${y+h/2+3}" text-anchor="middle" font-size="${Math.min(10,h*0.4)}" fill="${col[1]}" font-weight="600">${pl.label}</text>`;
         }
       }
     }
-    // Satin direction arrows
-    html += `<defs><marker id="arr" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#999"/></marker></defs>`;
-    html += `<line x1="${ox+6}" y1="${oy+drawH+12}" x2="${ox+50}" y2="${oy+drawH+12}" stroke="#999" stroke-width="1" marker-end="url(#arr)"/>`;
-    html += `<text x="${ox+54}" y="${oy+drawH+15}" font-size="8" fill="#999">сатин</text>`;
+    // satin / grinding direction runs along the long side of the sheet
+    html += `<line x1="${ox+6}" y1="${oy+drawH+11}" x2="${ox+50}" y2="${oy+drawH+11}" stroke="#999" stroke-width="1" marker-end="url(#arr)"/>`;
+    html += `<text x="${ox+54}" y="${oy+drawH+14}" font-size="8" fill="#999">сатин</text>`;
+    html += `<text x="${ox+drawW+3}" y="${oy+drawH/2}" font-size="8" fill="#999" transform="rotate(90,${ox+drawW+3},${oy+drawH/2})">1250 мм</text>`;
+  });
 
-    svg.innerHTML = html;
-    info.innerHTML = `
-      <span><span class="dot" style="background:#b08d57;opacity:.3;border:1px solid #b08d57"></span> Центр. ${n.cL.toFixed(1)}×${n.cW.toFixed(1)} мм</span>
-      <span><span class="dot" style="background:#c0392b;opacity:.25;border:1px solid #c0392b"></span> Бок. ${n.sL.toFixed(1)}×${n.sW.toFixed(1)} мм ×2</span>
-      <span><b>${n.count} чаш</b> на лист</span>
-      <span class="${wasteCls}">Отход: ${n.wastePct}%</span>
-    `;
-  } else {
-    // --- STANDARD: single blank ---
-    const colors = ['#b08d57','#c4a46c','#d4b87e','#a07a48','#8b6f3a','#c9a960'];
-    for(let c=0; c<n.colsL; c++){
-      for(let r=0; r<n.rowsW; r++){
-        let x = ox + c * n.blankL * scale + gap;
-        let y = oy + r * n.blankW * scale + gap;
-        let w = n.blankL * scale - gap*2;
-        let h = n.blankW * scale - gap*2;
-        let ci = (c + r) % colors.length;
-        html += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${colors[ci]}" fill-opacity="0.3" stroke="${colors[ci]}" stroke-width="1" rx="2"/>`;
-        let num = c * n.rowsW + r + 1;
-        if(w > 20 && h > 14) html += `<text x="${x+w/2}" y="${y+h/2+4}" text-anchor="middle" font-size="${Math.min(12, h*0.4)}" fill="#4a3a20" font-weight="600">${num}</text>`;
-      }
-    }
-    html += `<text x="${ox+drawW+4}" y="${oy+drawH/2}" font-size="9" fill="#999" transform="rotate(90,${ox+drawW+4},${oy+drawH/2})">${n.sheetW} мм</text>`;
-    svg.innerHTML = html;
-    info.innerHTML = `
-      <span><span class="dot" style="background:#b08d57;opacity:.3;border:1px solid #b08d57"></span> Заготовка ${Math.round(n.blankL)}×${Math.round(n.blankW)} мм</span>
-      <span><b>${n.count} шт</b> на лист</span>
-      <span class="${wasteCls}">Отход: ${n.wastePct}%</span>
-    `;
-  }
+  svg.innerHTML = html;
+
+  let wasteCls = parseFloat(n.wastePct) > 15 ? 'waste-pct' : 'good-pct';
+  let legend = n.defs.map(d => {
+    let col = (BLANK_COL[d.key] || BLANK_COL.def)[0];
+    return `<span><span class="dot" style="background:${col};opacity:.45;border:1px solid ${col}"></span> ${d.label} — ${d.name} ${Math.round(d.l)}×${Math.round(d.w)} мм${d.per>1?' ×'+d.per:''}</span>`;
+  }).join('');
+  let unit = plural(n.batch, n.unitForms || ['шт','шт','шт']);
+  let yieldTxt = sheets.length === 1
+    ? `<span><b>${n.batch} ${unit}</b> с листа</span>`
+    : `<span><b>${n.batch} ${unit}</b> с ${sheets.length} листов = ${n.count.toFixed(2)} шт/лист</span>`;
+  info.innerHTML = legend + yieldTxt + `<span class="${wasteCls}">Отход: ${n.wastePct}%</span>`;
 }
 
 // ============================================================
 //  PRICING ENGINE
 // ============================================================
 function sheetW(area,th){return area*(th/1000)*R.density;}
-function sheetCostByNesting(p, Lmm, Wmm, thick){
-  // Calculate using nesting: cost = sheet_price / count
-  let n = calcNesting(p, Lmm, Wmm, thick);
-  let sheetPrice = thick <= 0.8 ? R.sheetCost08 : thick <= 1.0 ? R.sheetCost10 : R.sheetCost12;
-  return { costPerUnit: sheetPrice / n.count, nesting: n, sheetPrice };
-}
 
 function calc(p,qty,margin){
   let el=k=>document.getElementById(k);
@@ -997,23 +1026,18 @@ function calc(p,qty,margin){
   if(extraShelf>0){sheet+=extraShelf*W;laserM+=(extraShelf+W)*2;bends+=4;}
 
   // --- NESTING-BASED SHEET COST ---
-  let nestData = calcNesting(p, Lmm, Wmm, thick);
+  let nestData = calcNesting(p, Lmm, Wmm, thick, {
+    bd: bd*1000, H: H*1000, bowls, bort, shelf, shelves, exec
+  });
   let sheetPrice = thick <= 0.8 ? R.sheetCost08 : thick <= 1.0 ? R.sheetCost10 : R.sheetCost12;
-  let cSheetNesting = sheetPrice / nestData.count;
-
-  // Additional material costs (other steel parts not from main sheet)
-  let sheetKg = sheetW(sheet, thick);
-  let cSheetCalc = sheetKg * (thick<=0.8?R.sheet08:thick<=1.0?R.sheet10:R.sheet12);
-  // Use nesting-based cost for main sheet, add delta for extra parts
-  let cSheet = cSheetNesting;
-  // If calculated area suggests more material than one nesting piece, add the extra
-  let nestingPieceArea = (nestData.blankL/1000) * (nestData.blankW/1000);
-  if(sheet > nestingPieceArea * 1.2){
-    // Extra material beyond the main blank
-    let extraArea = sheet - nestingPieceArea;
-    let extraKg = extraArea * (thick/1000) * R.density;
-    cSheet += extraKg * (thick<=0.8?R.sheet08:thick<=1.0?R.sheet10:R.sheet12);
-  }
+  let kgPrice = thick<=0.8?R.sheet08:thick<=1.0?R.sheet10:R.sheet12;
+  // The nesting set already covers every blank of the product
+  let setArea = nestData.defs.reduce((s,d)=> s + (d.l/1000)*(d.w/1000)*d.per, 0);
+  let sheetKg = sheetW(setArea, thick);
+  // Sheet cost = price of one sheet ÷ products yielded from it
+  let cSheet = sheetPrice / nestData.count;
+  // Parts not taken from the main sheet (extra shelves entered by hand)
+  if(extraShelf > 0) cSheet += sheetW(extraShelf*W, thick) * kgPrice;
 
   let cFrame=frameM*R.tube40+legs*R.foot;
   let cLaser=laserM*R.laser;
@@ -1028,7 +1052,10 @@ function calc(p,qty,margin){
 
   // --- BUILD BREAKDOWN ---
   lines.push({name:'Материалы',group:1});
-  lines.push({name:`Лист ${thick}мм — ${nestData.count} шт/лист (${sheetKg.toFixed(1)} кг)`,value:Math.round(cSheet),sub:1});
+  let yieldTxt = nestData.sheets.length === 1
+    ? `${nestData.batch} шт/лист`
+    : `${nestData.batch} шт с ${nestData.sheets.length} листов`;
+  lines.push({name:`Лист ${thick}мм — ${yieldTxt} (${sheetKg.toFixed(1)} кг заготовок)`,value:Math.round(cSheet),sub:1});
   if(frameM>0)lines.push({name:`Каркас — ${frameM.toFixed(2)} м трубы`,value:Math.round(cFrame),sub:1});
   if(legs>0)lines.push({name:`Опоры × ${legs}`,value:Math.round(legs*R.foot),sub:1});
 
