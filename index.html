@@ -54,6 +54,11 @@ header small{color:var(--muted);font-size:13px}
 .row{display:flex;gap:10px}
 .row>.field{flex:1}
 .hint{font-size:11px;color:var(--muted);margin-top:2px}
+/* Optional calculation toggles */
+.opt-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.opt{display:flex;align-items:center;gap:6px;font-size:13px;padding:7px 11px;border:1px solid var(--border);border-radius:20px;cursor:pointer;user-select:none;background:#fff}
+.opt:has(input:checked){border-color:var(--accent);background:rgba(176,141,87,.09);color:var(--accent);font-weight:500}
+.opt input{margin:0;accent-color:var(--accent);cursor:pointer}
 /* Waste rows */
 .waste-table{width:100%;border-collapse:collapse;margin-top:8px}
 .waste-table th{text-align:left;font-size:11px;color:var(--muted);padding:4px 6px;border-bottom:1px solid var(--border);font-weight:500}
@@ -162,6 +167,13 @@ header small{color:var(--muted);font-size:13px}
         <input type="number" id="margin" value="30" min="0">
       </div>
     </div>
+    <div class="opt-row">
+      <label class="opt"><input type="checkbox" id="optScrap" autocomplete="off"> Деловой остаток</label>
+      <label class="opt"><input type="checkbox" id="optDefect" autocomplete="off"> Брак</label>
+      <label class="opt"><input type="checkbox" id="optPack" autocomplete="off"> Упаковка</label>
+      <label class="opt"><input type="checkbox" id="optVat" autocomplete="off"> НДС</label>
+    </div>
+    <div class="hint" style="margin-top:6px">Выключены по умолчанию — базовая себестоимость считается как раньше. Проценты и цены настраиваются в справочнике.</div>
   </div>
 
   <!-- ===== 4. WASTE / CUTTING CALCULATOR ===== -->
@@ -350,7 +362,39 @@ header small{color:var(--muted);font-size:13px}
         <tr><td>Скидка</td><td>3%</td><td>5%</td><td>8%</td><td>12%</td><td>15%</td></tr>
       </table>
 
-      <h3>8. Контрольные значения (апрель 2026)</h3>
+      <h3>8. Дополнительные блоки (переключатели)</h3>
+      <p>Четыре блока выключены по умолчанию — базовая себестоимость считается без них.
+      Включаются галочками рядом с количеством и наценкой, проценты и цены редактируются в справочнике.</p>
+      <table>
+        <tr><th>Блок</th><th>Что делает</th><th>Формула</th></tr>
+        <tr>
+          <td><b>Деловой остаток</b></td>
+          <td>Строка «Лист» берёт в себестоимость весь лист целиком, включая отход. Часть отхода — это пригодный металл, который возвращается на склад и уходит в другие заказы. Блок возвращает его стоимость.</td>
+          <td>стоимость&nbsp;листа × %&nbsp;отхода × %&nbsp;возврата (по умолчанию 60%)</td>
+        </tr>
+        <tr>
+          <td><b>Брак</b></td>
+          <td>Технологические потери: порез не в размер, задир на гибке, прожог. Начисляется на производственную себестоимость (материалы + работы), без накладных.</td>
+          <td>(материалы + работы) × 2%</td>
+        </tr>
+        <tr>
+          <td><b>Упаковка</b></td>
+          <td>Плёнка и картон по площади поверхности короба вокруг изделия плюс фиксированная стоимость паллета/обрешётки.</td>
+          <td>2 × (Д×Ш + Д×В + Ш×В) × 90&nbsp;₽/м² + 250&nbsp;₽</td>
+        </tr>
+        <tr>
+          <td><b>НДС</b></td>
+          <td>Начисляется на цену после наценки. В расчёте появляются отдельные строки «Цена без НДС» и «НДС 20%».</td>
+          <td>цена × 20%</td>
+        </tr>
+      </table>
+      <p style="margin-top:10px">Отдельно выводится <b>справка</b> — масса изделия (лист + труба + опоры),
+      объём в упаковке для логистики, трудоёмкость и срок в сменах. Эти строки информационные
+      и в цену не входят.</p>
+      <p>Срок считается по нормам времени из справочника: лазер 1.2&nbsp;м/мин, гибка 1.5&nbsp;мин/гиб,
+      нарезка 2&nbsp;мин/рез, сварка 3&nbsp;м/ч, зачистка 6&nbsp;м/ч, плюс время сборки. Смена — 8 часов.</p>
+
+      <h3>9. Контрольные значения (апрель 2026)</h3>
       <p>Для проверки калькулятора — фактическая себестоимость по данным производства:</p>
       <table>
         <tr><th>Артикул</th><th>Материалы</th><th>Полная с/с</th><th>Дилер. мин ($)</th><th>Кратн.</th></tr>
@@ -396,7 +440,22 @@ const DEF = {
   // Accessories
   siphon:380, clips:250, sound:320, dispenser:650, colander:480,
   // Volume discounts
-  disc5:3, disc10:5, disc25:8, disc50:12, disc100:15
+  disc5:3, disc10:5, disc25:8, disc50:12, disc100:15,
+  // --- Optional blocks (enabled by the checkboxes, off by default) ---
+  vat:20,            // VAT, %
+  scrapReturn:60,    // share of the sheet offcut that is returned to stock, %
+  defectPct:2,       // technological scrap, % of the production cost
+  packPerM2:90,      // packaging (film/cardboard), rub per m2 of the box surface
+  packFix:250,       // pallet / crate per product, rub
+  // --- Weight & lead time ---
+  tubeKgM:1.77,      // 40x40x1.5 tube, kg per m
+  footKg:0.2,        // one adjustable foot, kg
+  shiftH:8,          // working hours in a shift
+  tLaserMmin:1.2,    // laser, m per minute
+  tBendMin:1.5,      // minutes per bend
+  tSawMin:2,         // minutes per saw cut
+  tWeldMh:3,         // welding, m per hour
+  tGrindMh:6         // grinding, m per hour
 };
 const REF_META = [
   ['Лист 0.8мм, р/кг','sheet08'],['Лист 1.0мм, р/кг','sheet10'],['Лист 1.2мм, р/кг','sheet12'],['Плотность, кг/м3','density'],
@@ -411,7 +470,12 @@ const REF_META = [
   ['Накл: Электр., р/шт','overElectric'],['Накл: Прочее, р/шт','overOther'],
   ['Сифон, р/шт','siphon'],['Крепл. врезной, р','clips'],['Шумоизол., р','sound'],
   ['Дозатор, р','dispenser'],['Коландер, р','colander'],
-  ['Скидка 5+шт %','disc5'],['Скидка 10+шт %','disc10'],['Скидка 25+шт %','disc25'],['Скидка 50+шт %','disc50'],['Скидка 100+шт %','disc100']
+  ['Скидка 5+шт %','disc5'],['Скидка 10+шт %','disc10'],['Скидка 25+шт %','disc25'],['Скидка 50+шт %','disc50'],['Скидка 100+шт %','disc100'],
+  ['НДС, %','vat'],['Возврат делового остатка, %','scrapReturn'],['Технологический брак, %','defectPct'],
+  ['Упаковка, р/м2','packPerM2'],['Паллет/обрешётка, р/шт','packFix'],
+  ['Труба 40×40, кг/м','tubeKgM'],['Опора, кг/шт','footKg'],['Часов в смене','shiftH'],
+  ['Лазер, м/мин','tLaserMmin'],['Гибка, мин/гиб','tBendMin'],['Нарезка, мин/рез','tSawMin'],
+  ['Сварка, м/час','tWeldMh'],['Зачистка, м/час','tGrindMh']
 ];
 let R = {...DEF};
 function loadRef(){try{let s=localStorage.getItem('melana_ref3');if(s)R={...DEF,...JSON.parse(s)}}catch(e){} renderRef();}
@@ -1149,14 +1213,42 @@ function calc(p,qty,margin){
   // --- OVERHEAD ---
   let cOverhead = R.overLabor + R.overDepr + R.overRent + R.overAbrasive + R.overArgon + R.overNitrogen + R.overElectric + R.overOther;
 
+  // --- OPTIONAL BLOCKS (checkboxes, all off by default) ---
+  let optScrap  = el('optScrap')?.checked,  optDefect = el('optDefect')?.checked,
+      optPack   = el('optPack')?.checked,   optVat    = el('optVat')?.checked;
+
+  // Offcut returned to stock. The sheet line above charges the whole sheet,
+  // waste included; part of that waste is usable metal that comes back.
+  let wastePct   = parseFloat(nestData.wastePct) || 0;
+  let cScrapBack = optScrap ? cSheet * (wastePct/100) * (R.scrapReturn/100) : 0;
+
+  // Packaging: surface area of the box around the product.
+  let Hgab = (cat==='bowl' || cat==='rinse') ? bd : H;
+  let packArea = 2*(L*W + L*Hgab + W*Hgab);
+  let cPack = optPack ? packArea*R.packPerM2 + R.packFix : 0;
+
+  // --- WEIGHT & LEAD TIME (informational, never affects the price) ---
+  let kgSteel = sheetKg;
+  let kgFrame = frameM*R.tubeKgM + legs*R.footKg;
+  let kgTotal = kgSteel + kgFrame;
+  let volM3   = (L+0.05)*(W+0.05)*(Hgab+0.05);
+  let hoursUnit = assemblyH
+    + (R.tLaserMmin>0 ? laserM/R.tLaserMmin/60 : 0)
+    + bends*R.tBendMin/60
+    + sawCuts*R.tSawMin/60
+    + (R.tWeldMh>0  ? weldM/R.tWeldMh   : 0)
+    + (R.tGrindMh>0 ? grindM/R.tGrindMh : 0);
+
   // --- BUILD BREAKDOWN ---
   lines.push({name:'Материалы',group:1});
   let yieldTxt = nestData.sheets.length === 1
     ? `${nestData.batch} шт/лист`
     : `${nestData.batch} шт с ${nestData.sheets.length} листов`;
   lines.push({name:`Лист ${thick}мм — ${yieldTxt} (${sheetKg.toFixed(1)} кг заготовок)`,value:Math.round(cSheet),sub:1});
+  if(cScrapBack>0)lines.push({name:`Деловой остаток — возврат ${R.scrapReturn}% от отхода ${wastePct}%`,value:-Math.round(cScrapBack),sub:1,discount:1});
   if(frameM>0)lines.push({name:`Каркас — ${frameM.toFixed(2)} м трубы`,value:Math.round(cFrame),sub:1});
   if(legs>0)lines.push({name:`Опоры × ${legs}`,value:Math.round(legs*R.foot),sub:1});
+  if(cPack>0)lines.push({name:`Упаковка — ${packArea.toFixed(2)} м² + паллет`,value:Math.round(cPack),sub:1});
 
   lines.push({name:'Работы',group:1});
   lines.push({name:`Лазер — ${laserM.toFixed(1)} м`,value:Math.round(cLaser),sub:1});
@@ -1198,21 +1290,47 @@ function calc(p,qty,margin){
     wasteLines.forEach(wl=>{lines.push({name:wl.name,value:wl.value,sub:1});wasteCost+=wl.value;});
   }
 
-  let costUnit=cSheet+cFrame+cLaser+cSaw+cBend+cWeld+cGrind+cAssembly+cOverhead+cExtras+wasteCost;
+  // Production cost (materials + operations), scrap allowance applies to it
+  let cProd = cSheet - cScrapBack + cFrame + cLaser + cSaw + cBend + cWeld + cGrind
+            + cAssembly + cExtras + wasteCost + cPack;
+  let cDefect = optDefect ? cProd*(R.defectPct/100) : 0;
+  if(cDefect>0){
+    lines.push({name:'Потери',group:1});
+    lines.push({name:`Технологический брак ${R.defectPct}%`,value:Math.round(cDefect),sub:1});
+  }
+
+  let costUnit=cProd+cOverhead+cDefect;
   let disc=0;
   if(qty>=100)disc=R.disc100;else if(qty>=50)disc=R.disc50;else if(qty>=25)disc=R.disc25;else if(qty>=10)disc=R.disc10;else if(qty>=5)disc=R.disc5;
   let afterDisc=costUnit*(1-disc/100);
   let withMargin=afterDisc*(1+margin/100);
-  let total=withMargin*qty;
+  let vatSum=optVat?withMargin*R.vat/100:0;
+  let priceUnit=withMargin+vatSum;
+  let total=priceUnit*qty;
 
   lines.push({name:''});
   lines.push({name:'Себестоимость 1 шт',value:Math.round(costUnit)});
   if(disc>0)lines.push({name:`Скидка ${disc}% (${qty} шт)`,value:-Math.round(costUnit*disc/100),discount:1});
   if(margin>0)lines.push({name:`Наценка ${margin}%`,value:Math.round(afterDisc*margin/100)});
-  lines.push({name:'Цена за 1 шт',value:Math.round(withMargin),total:1});
+  if(vatSum>0){
+    lines.push({name:'Цена без НДС',value:Math.round(withMargin)});
+    lines.push({name:`НДС ${R.vat}%`,value:Math.round(vatSum)});
+  }
+  lines.push({name:vatSum>0?'Цена с НДС за 1 шт':'Цена за 1 шт',value:Math.round(priceUnit),total:1});
   if(qty>1)lines.push({name:`ИТОГО за ${qty} шт`,value:Math.round(total),total:1});
 
-  return{lines,unit:Math.round(withMargin),total:Math.round(total),qty,nesting:nestData};
+  // --- INFORMATIONAL SUMMARY (not part of the price) ---
+  let days=Math.max(1,Math.ceil(hoursUnit*qty/R.shiftH));
+  let profitUnit=withMargin-costUnit;
+  lines.push({name:''});
+  lines.push({name:'Справка (не входит в цену)',group:1});
+  lines.push({name:'Масса изделия',value:`${kgTotal.toFixed(1)} кг`,sub:1});
+  lines.push({name:'Объём в упаковке',value:`${volM3.toFixed(2)} м³`,sub:1});
+  lines.push({name:'Трудоёмкость',value:`${hoursUnit.toFixed(1)} ч/шт`,sub:1});
+  lines.push({name:`Срок на ${qty} шт`,value:`${days} ${plural(days,['смена','смены','смен'])}`,sub:1});
+  if(margin>0)lines.push({name:'Прибыль с партии',value:`${Math.round(profitUnit*qty).toLocaleString('ru-RU')} руб.`,sub:1});
+
+  return{lines,unit:Math.round(priceUnit),total:Math.round(total),qty,nesting:nestData};
 }
 
 // ============================================================
@@ -1238,7 +1356,7 @@ function doCalc(){
     if(l.group)return`<tr class="group"><td colspan="2">${l.name}</td></tr>`;
     if(!l.name)return`<tr><td colspan="2" style="height:8px;border:none"></td></tr>`;
     let cls=l.total?'total':l.sub?'sub':l.discount?'discount':'';
-    let v=typeof l.value==='number'?(l.value<0?'−'+Math.abs(l.value).toLocaleString('ru-RU'):l.value.toLocaleString('ru-RU')):'';
+    let v=typeof l.value==='number'?(l.value<0?'−'+Math.abs(l.value).toLocaleString('ru-RU'):l.value.toLocaleString('ru-RU')):(l.value||'');
     return`<tr class="${cls}"><td>${l.name}</td><td>${v}</td></tr>`;
   }).join('');
 
@@ -1266,6 +1384,12 @@ function toggle(head){head.parentElement.classList.toggle('open');}
 loadRef();
 addWasteRow('Труба 40×40','','6000','580','');
 addWasteRow('Уголок 40×40','','2500','460','');
+// Toggling an optional block recalculates immediately when a result is shown
+['optScrap','optDefect','optPack','optVat'].forEach(id=>{
+  document.getElementById(id).addEventListener('change',()=>{
+    if(curP && document.getElementById('resultCard').classList.contains('show')) doCalc();
+  });
+});
 </script>
 </body>
 </html>
